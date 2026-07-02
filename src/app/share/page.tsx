@@ -191,14 +191,29 @@ function CardViewerContent() {
 
             {/* 기본 테두리 및 프로필 레이아웃 템플릿 적용 여부 */}
             {card.useDefaultTemplate && (
-              <div className="absolute inset-0 w-full h-full z-0 p-5 flex flex-col justify-between pointer-events-none border border-white/10 rounded-[15px]">
+              <div 
+                className="absolute inset-0 w-full h-full z-0 p-5 flex flex-col justify-between pointer-events-none border rounded-[15px]"
+                style={{ borderColor: card.textColor ? `${card.textColor}26` : "rgba(255, 255, 255, 0.1)" }}
+              >
                 
                 {/* Top Row: Info badge & Avatar */}
                 <div className="flex justify-between items-start w-full">
                   <div className="flex flex-col gap-1.5 items-start">
-                    <span className={`text-[9px] uppercase tracking-wider font-semibold ${mutedContrastColor}`}>PREVIEW CARD</span>
+                    <span 
+                      className="text-[9px] uppercase tracking-wider font-semibold"
+                      style={{ color: card.textColor || "#ffffff", opacity: 0.7 }}
+                    >
+                      PREVIEW CARD
+                    </span>
                     {card.company && (
-                      <span className={`text-[10px] font-medium px-3 py-1 rounded-full border backdrop-blur-md ${contrastColor === 'text-slate-900' ? 'bg-white/40 border-black/20 text-slate-900' : 'bg-[#0d0f12]/60 border-serenity/20 text-serenity'}`}>
+                      <span 
+                        className="text-[10px] font-medium px-3 py-1 rounded-full border backdrop-blur-md"
+                        style={{
+                          color: card.textColor || "#ffffff",
+                          borderColor: card.textColor ? `${card.textColor}33` : "rgba(255, 255, 255, 0.2)",
+                          backgroundColor: card.textColor === "#0f172a" ? "rgba(255, 255, 255, 0.3)" : "rgba(13, 23, 31, 0.6)"
+                        }}
+                      >
                         {card.company}
                       </span>
                     )}
@@ -219,7 +234,10 @@ function CardViewerContent() {
                         className="w-full h-full rounded-full object-cover bg-neutral-800"
                       />
                     ) : (
-                      <div className={`w-full h-full rounded-full bg-neutral-900/40 flex items-center justify-center text-[10px] font-bold ${mutedContrastColor}`}>
+                      <div 
+                        className="w-full h-full rounded-full bg-neutral-900/40 flex items-center justify-center text-[10px] font-bold"
+                        style={{ color: card.textColor || "#ffffff", opacity: 0.7 }}
+                      >
                         IMG
                       </div>
                     )}
@@ -229,17 +247,26 @@ function CardViewerContent() {
                 {/* Bottom Row: Name Block */}
                 <div className="flex flex-col gap-0.5 items-start mt-auto">
                   <div className="flex items-baseline gap-1.5">
-                    <h1 className={`text-xl font-bold tracking-tight ${contrastColor}`}>
+                    <h1 
+                      className="text-xl font-bold tracking-tight"
+                      style={{ color: card.textColor || "#ffffff" }}
+                    >
                       {card.name || "이름"}
                     </h1>
                     {card.engName && (
-                      <span className={`text-xs font-light italic ${mutedContrastColor}`}>
+                      <span 
+                        className="text-xs font-light italic"
+                        style={{ color: card.textColor || "#ffffff", opacity: 0.7 }}
+                      >
                         {card.engName}
                       </span>
                     )}
                   </div>
                   {card.phone && (
-                    <span className={`text-[11px] font-mono tracking-wide ${mutedContrastColor}`}>
+                    <span 
+                      className="text-[11px] font-mono tracking-wide"
+                      style={{ color: card.textColor || "#ffffff", opacity: 0.8 }}
+                    >
                       {card.phone}
                     </span>
                   )}

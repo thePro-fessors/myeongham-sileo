@@ -51,6 +51,8 @@ export interface BusinessCard {
   // Custom visual shapes
   shapes: CardShape[];
 
+  password?: string; // 비밀번호 보호 필드
+
   createdAt: number;
 }
 

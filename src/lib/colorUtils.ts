@@ -30,3 +30,13 @@ export function getGradientContrastColor(startHex: string, endHex: string): stri
   const avgLum = (lum1 + lum2) / 2;
   return avgLum > 0.5 ? 'text-slate-900' : 'text-white';
 }
+
+export async function hashPassword(password: string): Promise<string> {
+  if (!password) return "";
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}

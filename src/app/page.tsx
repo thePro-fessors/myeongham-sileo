@@ -7,9 +7,10 @@ import {
   DEFAULT_CARD,
   saveCard,
   getSavedCards,
-  removeCardFromWallet
+  removeCardFromWallet,
+  getCard
 } from "@/lib/db";
-import { getGradientContrastColor, getContrastTextColor } from "@/lib/colorUtils";
+import { getGradientContrastColor, getContrastTextColor, hashPassword } from "@/lib/colorUtils";
 import { QRCodeSVG } from "qrcode.react";
 import {
   Settings,
@@ -37,7 +38,9 @@ import {
   Image as ImageIcon,
   Code,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Download,
+  Upload
 } from "lucide-react";
 import Link from "next/link";
 import { Preferences } from "@capacitor/preferences";
@@ -50,6 +53,13 @@ export default function AppDashboard() {
   const [publishStatus, setPublishStatus] = useState<"idle" | "saving" | "success">("idle");
   const [copiedLink, setCopiedLink] = useState(false);
   const [customCardId, setCustomCardId] = useState("my-first-card");
+
+  // Password-related States
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordModalType, setPasswordModalType] = useState<"set" | "verify">("set");
+  const [inputPassword, setInputPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [pendingCard, setPendingCard] = useState<BusinessCard | null>(null);
 
   // Figma Canvas Editing States
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
@@ -92,7 +102,20 @@ export default function AppDashboard() {
 
   const handleStyleChange = (name: string, value: string | number | boolean) => {
     setMyCard((prev) => {
-      const updated = { ...prev, [name]: value };
+      let updated = { ...prev, [name]: value };
+
+      // Automatically recalculate optimal textColor on background-related changes
+      if (["gradientStart", "gradientEnd", "bgColor", "bgType", "gradientType"].includes(name)) {
+        const bgType = updated.bgType;
+        const contrastColorClass = bgType === "gradient"
+          ? getGradientContrastColor(updated.gradientStart, updated.gradientEnd)
+          : bgType === "solid" && updated.bgColor
+            ? getContrastTextColor(updated.bgColor)
+            : "text-white";
+
+        updated.textColor = contrastColorClass === "text-slate-900" ? "#0f172a" : "#ffffff";
+      }
+
       localStorage.setItem("my-business-card", JSON.stringify(updated));
       return updated;
     });
@@ -265,20 +288,61 @@ export default function AppDashboard() {
 
   const handlePublish = async () => {
     setPublishStatus("saving");
+    const targetId = customCardId.trim() || `card-${Date.now().toString().slice(-6)}`;
     const updatedCard = {
       ...myCard,
-      id: customCardId.trim() || `card-${Date.now().toString().slice(-6)}`,
+      id: targetId,
       createdAt: Date.now()
     };
 
-    await saveCard(updatedCard);
-    setMyCard(updatedCard);
-    localStorage.setItem("my-business-card", JSON.stringify(updatedCard));
+    try {
+      const existingCard = await getCard(targetId);
+      if (existingCard) {
+        if (existingCard.password) {
+          // 비밀번호 매칭 유도
+          setPendingCard(updatedCard);
+          setPasswordModalType("verify");
+          setInputPassword("");
+          setPasswordError("");
+          setShowPasswordModal(true);
+          setPublishStatus("idle");
+          return;
+        } else {
+          // 비밀번호 미등록 명함 -> 비밀번호 지정 강제
+          setPendingCard(updatedCard);
+          setPasswordModalType("set");
+          setInputPassword("");
+          setPasswordError("");
+          setShowPasswordModal(true);
+          setPublishStatus("idle");
+          return;
+        }
+      } else {
+        // 신규 등록 시에도 비밀번호 설정 요구
+        setPendingCard(updatedCard);
+        setPasswordModalType("set");
+        setInputPassword("");
+        setPasswordError("");
+        setShowPasswordModal(true);
+        setPublishStatus("idle");
+        return;
+      }
+    } catch (err) {
+      console.error("Error checking existing card, auto saving:", err);
+      await savePublish(updatedCard);
+    }
+  };
+
+  const savePublish = async (card: BusinessCard) => {
+    setPublishStatus("saving");
+    await saveCard(card);
+    setMyCard(card);
+    localStorage.setItem("my-business-card", JSON.stringify(card));
 
     try {
       await Preferences.set({
         key: "my_card_id",
-        value: updatedCard.id,
+        value: card.id,
       });
       console.log("Card ID synced to native preferences for HCE.");
     } catch (e) {
@@ -286,6 +350,271 @@ export default function AppDashboard() {
     }
 
     setPublishStatus("success");
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingCard) return;
+
+    if (passwordModalType === "set") {
+      if (!inputPassword.trim()) {
+        setPasswordError("비밀번호를 입력해주세요.");
+        return;
+      }
+      const hashed = await hashPassword(inputPassword);
+      const cardWithPassword = {
+        ...pendingCard,
+        password: hashed
+      };
+      await savePublish(cardWithPassword);
+      setShowPasswordModal(false);
+      setPendingCard(null);
+    } else {
+      try {
+        const existingCard = await getCard(pendingCard.id);
+        const hashedInput = await hashPassword(inputPassword);
+        if (existingCard && existingCard.password === hashedInput) {
+          const cardWithPassword = {
+            ...pendingCard,
+            password: hashedInput
+          };
+          await savePublish(cardWithPassword);
+          setShowPasswordModal(false);
+          setPendingCard(null);
+        } else {
+          setPasswordError("비밀번호가 일치하지 않습니다.");
+        }
+      } catch (err) {
+        setPasswordError("비밀번호 확인 중 오류가 발생했습니다.");
+      }
+    }
+  };
+
+  // 1. JSON 파일로 내보내기 (JSON Download)
+  const exportCardAsJSON = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(myCard, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `myeongham-${myCard.id || "card"}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // 2. JSON 파일로부터 명함 가져오기 (JSON Upload)
+  const importCardFromJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader();
+    if (e.target.files && e.target.files[0]) {
+      fileReader.readAsText(e.target.files[0], "UTF-8");
+      fileReader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target?.result as string);
+          if (parsed && typeof parsed === "object" && parsed.id) {
+            setMyCard(parsed);
+            setCustomCardId(parsed.id);
+            localStorage.setItem("my-business-card", JSON.stringify(parsed));
+            alert("명함 데이터를 성공적으로 불러왔습니다!");
+          } else {
+            alert("올바른 명함 데이터 JSON 파일이 아닙니다.");
+          }
+        } catch (err) {
+          alert("파일 파싱 중 에러가 발생했습니다.");
+        }
+      };
+    }
+  };
+
+  // 3. PNG 이미지로 다운로드 (HTML5 Canvas를 사용하여 오프스크린 렌더링)
+  const exportCardAsImage = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 800;
+    canvas.height = 504;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // 둥근 사각형 클리핑 경로 그리기 (명함 모서리 둥글게)
+    const radius = 32;
+    ctx.beginPath();
+    ctx.moveTo(radius, 0);
+    ctx.lineTo(canvas.width - radius, 0);
+    ctx.quadraticCurveTo(canvas.width, 0, canvas.width, radius);
+    ctx.lineTo(canvas.width, canvas.height - radius);
+    ctx.quadraticCurveTo(canvas.width, canvas.height, canvas.width - radius, canvas.height);
+    ctx.lineTo(radius, canvas.height);
+    ctx.quadraticCurveTo(0, canvas.height, 0, canvas.height - radius);
+    ctx.lineTo(0, radius);
+    ctx.quadraticCurveTo(0, 0, radius, 0);
+    ctx.closePath();
+    ctx.clip();
+
+    // 1. 배경 채우기
+    if (myCard.bgType === "solid" && myCard.bgColor) {
+      ctx.fillStyle = myCard.bgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else if (myCard.bgType === "gradient") {
+      let grad;
+      if (myCard.gradientType === "radial") {
+        grad = ctx.createRadialGradient(
+          canvas.width / 2, canvas.height / 2, 0,
+          canvas.width / 2, canvas.height / 2, canvas.width / 2
+        );
+      } else {
+        const angleRad = ((myCard.gradientAngle ?? 135) * Math.PI) / 180;
+        const halfW = canvas.width / 2;
+        const halfH = canvas.height / 2;
+        const x0 = halfW - Math.cos(angleRad) * halfW;
+        const y0 = halfH - Math.sin(angleRad) * halfH;
+        const x1 = halfW + Math.cos(angleRad) * halfW;
+        const y1 = halfH + Math.sin(angleRad) * halfH;
+        grad = ctx.createLinearGradient(x0, y0, x1, y1);
+      }
+      grad.addColorStop(0, myCard.gradientStart);
+      grad.addColorStop(1, myCard.gradientEnd);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else if (myCard.bgType === "image" && myCard.bgImageUrl) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = myCard.bgImageUrl;
+      img.onload = () => {
+        const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const x = (canvas.width - w) / 2;
+        const y = (canvas.height - h) / 2;
+        ctx.drawImage(img, x, y, w, h);
+        drawCardElements(ctx, canvas);
+        downloadCanvas(canvas);
+      };
+      img.onerror = () => {
+        ctx.fillStyle = "#13171f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawCardElements(ctx, canvas);
+        downloadCanvas(canvas);
+      };
+      return;
+    } else {
+      ctx.fillStyle = "#13171f";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    drawCardElements(ctx, canvas);
+    downloadCanvas(canvas);
+  };
+
+  const drawCardElements = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
+    const txtColor = myCard.textColor || "#ffffff";
+    const mutedTxtColor = txtColor === "#0f172a" ? "rgba(15, 23, 42, 0.7)" : "rgba(255, 255, 255, 0.7)";
+
+    if (myCard.useDefaultTemplate) {
+      ctx.strokeStyle = txtColor === "#0f172a" ? "rgba(15, 23, 42, 0.15)" : "rgba(255, 255, 255, 0.15)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+      ctx.font = "bold 18px sans-serif";
+      ctx.fillStyle = mutedTxtColor;
+      ctx.fillText("PREVIEW CARD", 40, 60);
+
+      if (myCard.company) {
+        const companyText = myCard.company;
+        ctx.font = "medium 20px sans-serif";
+        const badgeWidth = ctx.measureText(companyText).width + 30;
+        ctx.fillStyle = txtColor === "#0f172a" ? "rgba(15, 23, 42, 0.1)" : "rgba(255, 255, 255, 0.1)";
+        ctx.beginPath();
+        ctx.roundRect(40, 85, badgeWidth, 36, 18);
+        ctx.fill();
+        ctx.strokeStyle = txtColor === "#0f172a" ? "rgba(15, 23, 42, 0.2)" : "rgba(255, 255, 255, 0.2)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = txtColor;
+        ctx.fillText(companyText, 55, 111);
+      }
+
+      if (myCard.avatarUrl) {
+        const avatarImg = new Image();
+        avatarImg.crossOrigin = "anonymous";
+        avatarImg.src = myCard.avatarUrl;
+        avatarImg.onload = () => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(canvas.width - 90, 90, 50, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(avatarImg, canvas.width - 140, 40, 100, 100);
+          ctx.restore();
+        };
+      } else {
+        ctx.beginPath();
+        ctx.arc(canvas.width - 90, 90, 50, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.fill();
+        ctx.fillStyle = mutedTxtColor;
+        ctx.font = "bold 18px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("IMG", canvas.width - 90, 96);
+        ctx.textAlign = "left";
+      }
+
+      ctx.fillStyle = txtColor;
+      ctx.font = "bold 44px sans-serif";
+      ctx.fillText(myCard.name || "이름", 40, canvas.height - 100);
+
+      const nameWidth = ctx.measureText(myCard.name || "이름").width;
+      if (myCard.engName) {
+        ctx.fillStyle = mutedTxtColor;
+        ctx.font = "300 24px sans-serif";
+        ctx.fillText(myCard.engName, 40 + nameWidth + 15, canvas.height - 104);
+      }
+
+      if (myCard.phone) {
+        ctx.fillStyle = mutedTxtColor;
+        ctx.font = "18px monospace";
+        ctx.fillText(myCard.phone, 40, canvas.height - 50);
+      }
+    } else {
+      myCard.shapes.forEach((shape) => {
+        const sx = (shape.x / 100) * canvas.width;
+        const sy = (shape.y / 100) * canvas.height;
+        const sw = (shape.width / 100) * canvas.width;
+        const sh = (shape.height / 100) * canvas.height;
+
+        ctx.fillStyle = shape.color;
+
+        if (shape.type === "rect") {
+          ctx.fillRect(sx, sy, sw, sh);
+        } else if (shape.type === "circle") {
+          ctx.beginPath();
+          const cx = sx + sw / 2;
+          const cy = sy + sh / 2;
+          const r = Math.min(sw, sh) / 2;
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (shape.type === "text") {
+          const fontSizePx = (shape.fontSize || 14) * 2;
+          ctx.font = `${shape.fontWeight === "bold" ? "bold" : "normal"} ${fontSizePx}px sans-serif`;
+          ctx.textBaseline = "middle";
+
+          const textToShow = shape.bindField
+            ? (myCard[shape.bindField] || "")
+            : (shape.text || "");
+          ctx.fillText(textToShow, sx, sy + sh / 2);
+        }
+      });
+    }
+  };
+
+  const downloadCanvas = (canvas: HTMLCanvasElement) => {
+    try {
+      const dataUrl = canvas.toDataURL("image/png");
+      const downloadAnchor = document.createElement("a");
+      downloadAnchor.setAttribute("href", dataUrl);
+      downloadAnchor.setAttribute("download", `myeongham-${myCard.id || "card"}.png`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    } catch (e) {
+      alert("도메인이 다르거나 외부 이미지가 포함되어 캔버스 다운로드를 진행할 수 없습니다. 대신 JSON 백업 기능을 사용해 주세요.");
+    }
   };
 
   const handleCopyLink = () => {
@@ -427,14 +756,29 @@ export default function AppDashboard() {
 
                   {/* 1. 원래 스크린샷 템플릿 디자인 오버레이 (useDefaultTemplate이 true일 때만) */}
                   {myCard.useDefaultTemplate && (
-                    <div className="absolute inset-0 w-full h-full z-0 p-5 flex flex-col justify-between pointer-events-none border border-white/10 rounded-[15px]">
+                    <div 
+                      className="absolute inset-0 w-full h-full z-0 p-5 flex flex-col justify-between pointer-events-none border rounded-[15px]"
+                      style={{ borderColor: myCard.textColor ? `${myCard.textColor}26` : "rgba(255, 255, 255, 0.1)" }}
+                    >
 
                       {/* Top Row: Info badge & Avatar */}
                       <div className="flex justify-between items-start w-full">
                         <div className="flex flex-col gap-1.5 items-start">
-                          <span className={`text-[9px] uppercase tracking-wider font-semibold ${mutedContrastColor}`}>PREVIEW CARD</span>
+                          <span 
+                            className="text-[9px] uppercase tracking-wider font-semibold"
+                            style={{ color: myCard.textColor || "#ffffff", opacity: 0.7 }}
+                          >
+                            PREVIEW CARD
+                          </span>
                           {myCard.company && (
-                            <span className={`text-[10px] font-medium px-3 py-1 rounded-full border backdrop-blur-md ${contrastColor === 'text-slate-900' ? 'bg-white/40 border-black/20 text-slate-900' : 'bg-[#0d0f12]/60 border-serenity/20 text-serenity'}`}>
+                            <span 
+                              className="text-[10px] font-medium px-3 py-1 rounded-full border backdrop-blur-md"
+                              style={{
+                                color: myCard.textColor || "#ffffff",
+                                borderColor: myCard.textColor ? `${myCard.textColor}33` : "rgba(255, 255, 255, 0.2)",
+                                backgroundColor: myCard.textColor === "#0f172a" ? "rgba(255, 255, 255, 0.3)" : "rgba(13, 23, 31, 0.6)"
+                              }}
+                            >
                               {myCard.company}
                             </span>
                           )}
@@ -455,7 +799,10 @@ export default function AppDashboard() {
                               className="w-full h-full rounded-full object-cover bg-neutral-800"
                             />
                           ) : (
-                            <div className={`w-full h-full rounded-full bg-neutral-900/40 flex items-center justify-center text-[10px] font-bold ${mutedContrastColor}`}>
+                            <div 
+                              className="w-full h-full rounded-full bg-neutral-900/40 flex items-center justify-center text-[10px] font-bold"
+                              style={{ color: myCard.textColor || "#ffffff", opacity: 0.7 }}
+                            >
                               IMG
                             </div>
                           )}
@@ -465,17 +812,26 @@ export default function AppDashboard() {
                       {/* Bottom Row: Name Block */}
                       <div className="flex flex-col gap-0.5 items-start mt-auto">
                         <div className="flex items-baseline gap-1.5">
-                          <h1 className={`text-xl font-bold tracking-tight ${contrastColor}`}>
+                          <h1 
+                            className="text-xl font-bold tracking-tight"
+                            style={{ color: myCard.textColor || "#ffffff" }}
+                          >
                             {myCard.name || "이름"}
                           </h1>
                           {myCard.engName && (
-                            <span className={`text-xs font-light italic ${mutedContrastColor}`}>
+                            <span 
+                              className="text-xs font-light italic"
+                              style={{ color: myCard.textColor || "#ffffff", opacity: 0.7 }}
+                            >
                               {myCard.engName}
                             </span>
                           )}
                         </div>
                         {myCard.phone && (
-                          <span className={`text-[11px] font-mono tracking-wide ${mutedContrastColor}`}>
+                          <span 
+                            className="text-[11px] font-mono tracking-wide"
+                            style={{ color: myCard.textColor || "#ffffff", opacity: 0.8 }}
+                          >
                             {myCard.phone}
                           </span>
                         )}
@@ -671,6 +1027,48 @@ export default function AppDashboard() {
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* PANEL 1.5: Local Storage & Backup Panel */}
+              <div className="bg-card-bg border border-card-border rounded-2xl p-5 backdrop-blur-md flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-sm font-semibold">명함 로컬 저장 및 백업</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    이 기기에 명함을 이미지로 직접 저장하거나 데이터(JSON) 파일로 백업할 수 있습니다.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={exportCardAsImage}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-card-border rounded-xl text-xs font-bold transition cursor-pointer text-white"
+                  >
+                    <Download className="w-3.5 h-3.5 text-serenity" />
+                    <span>PNG 이미지로 저장</span>
+                  </button>
+
+                  <button
+                    onClick={exportCardAsJSON}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-card-border rounded-xl text-xs font-bold transition cursor-pointer text-white"
+                  >
+                    <Code className="w-3.5 h-3.5 text-rose-quartz" />
+                    <span>JSON 파일로 백업</span>
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-1.5 border-t border-card-border/50 pt-3.5">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">JSON 백업 파일 가져오기</span>
+                  <label className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-[#13171f] hover:bg-[#1a1f29] border border-card-border border-dashed rounded-xl text-xs font-medium cursor-pointer transition text-muted-foreground hover:text-white">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>파일 업로드 (.json)</span>
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={importCardFromJSON}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -948,6 +1346,41 @@ export default function AppDashboard() {
                   </div>
                 )}
 
+                {/* 4. Text Color Custom Panel */}
+                <div className="flex flex-col gap-1.5 border-t border-card-border/50 pt-4 mt-1">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase">기본 텍스트 색상</span>
+                  <div className="flex items-center gap-3 bg-[#13171f] border border-card-border p-2 rounded-xl">
+                    <input
+                      type="color"
+                      value={myCard.textColor || "#ffffff"}
+                      onChange={(e) => handleStyleChange("textColor", e.target.value)}
+                      className="w-10 h-10 rounded-lg cursor-pointer border-none bg-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={myCard.textColor || "#ffffff"}
+                      onChange={(e) => handleStyleChange("textColor", e.target.value)}
+                      className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-white placeholder-muted-foreground"
+                      placeholder="#ffffff"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const bgType = myCard.bgType;
+                        const contrastColorClass = bgType === "gradient"
+                          ? getGradientContrastColor(myCard.gradientStart, myCard.gradientEnd)
+                          : bgType === "solid" && myCard.bgColor
+                            ? getContrastTextColor(myCard.bgColor)
+                            : "text-white";
+                        handleStyleChange("textColor", contrastColorClass === "text-slate-900" ? "#0f172a" : "#ffffff");
+                      }}
+                      className="px-2.5 py-1.5 bg-white/5 border border-card-border hover:bg-white/10 rounded-lg text-[10px] text-muted-foreground hover:text-white transition cursor-pointer"
+                    >
+                      자동 맞춤
+                    </button>
+                  </div>
+                </div>
+
                 {/* 2. Custom Image URL Panel */}
                 {myCard.bgType === "image" && (
                   <div className="flex flex-col gap-1.5 animate-fade-in">
@@ -1209,6 +1642,57 @@ export default function AppDashboard() {
           </div>
         )}
       </main>
+
+      {/* Password Modal Overlay */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#13171f] border border-card-border rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-fade-in">
+            <h3 className="text-base font-bold text-white mb-2">
+              {passwordModalType === "set" ? "배포 비밀번호 설정" : "비밀번호 확인"}
+            </h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              {passwordModalType === "set"
+                ? "명함을 타인이 무단으로 덮어쓸 수 없도록 관리 비밀번호를 새로 설정하세요."
+                : "이미 게시된 명함 ID입니다. 덮어쓰려면 기존 배포 비밀번호를 입력해야 합니다."}
+            </p>
+
+            <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <input
+                  type="password"
+                  value={inputPassword}
+                  onChange={(e) => setInputPassword(e.target.value)}
+                  className="px-3.5 py-2.5 bg-[#0d0f12] border border-card-border rounded-xl text-sm text-white focus:border-serenity focus:outline-none placeholder-muted-foreground w-full"
+                  placeholder="비밀번호를 입력하세요"
+                  autoFocus
+                />
+                {passwordError && (
+                  <span className="text-[11px] text-rose-quartz mt-1 font-medium">{passwordError}</span>
+                )}
+              </div>
+
+              <div className="flex gap-2 justify-end mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setPendingCard(null);
+                  }}
+                  className="px-4 py-2 border border-card-border hover:bg-white/5 rounded-xl text-xs font-bold text-muted-foreground hover:text-white transition cursor-pointer"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-gradient-to-r from-serenity to-rose-quartz text-slate-900 rounded-xl text-xs font-bold transition hover:scale-[1.01] active:scale-[0.99] cursor-pointer shadow-lg"
+                >
+                  확인
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
