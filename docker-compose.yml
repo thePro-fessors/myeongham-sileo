@@ -7,3 +7,17 @@ services:
     ports:
       - "3000:80"
     restart: always
+    depends_on:
+      - unicard-api
+
+  unicard-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: unicard-api
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./data:/app/data
+    restart: always
+

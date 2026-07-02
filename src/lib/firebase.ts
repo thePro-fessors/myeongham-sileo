@@ -1,33 +1,52 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { BusinessCard } from "./db";
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+// Dynamically resolve API URL based on frontend hostname (useful for native devices or local Docker setups)
+export const getApiUrl = () => {
+  if (typeof window === "undefined") return "http://localhost:5001";
+  const host = window.location.hostname;
+  return `http://${host}:5001`;
 };
 
-// Check if firebase configurations are set
-const isFirebaseEnabled = 
-  !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
-  !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+// Check if Remote server is reachable/enabled
+export const isFirebaseEnabled = true; // Always enable API server database by default
 
-let app;
-let db: ReturnType<typeof getFirestore> | null = null;
-
-if (isFirebaseEnabled) {
+// Get single business card by ID from SQLite REST API
+export async function getCard(id: string): Promise<BusinessCard | null> {
   try {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    db = getFirestore(app);
-    console.log("Firebase initialized successfully.");
+    const response = await fetch(`${getApiUrl()}/api/cards/${id}`);
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      const errRes = await response.json().catch(() => ({}));
+      throw new Error(errRes.error || `Server responded with status: ${response.status}`);
+    }
+    const cardData = await response.json();
+    return cardData as BusinessCard;
   } catch (error) {
-    console.error("Firebase initialization failed:", error);
+    console.error("Error calling getCard API:", error);
+    throw error;
   }
-} else {
-  console.warn("Firebase config is missing. App is running in Local Storage fallback mode.");
 }
 
-export { db, isFirebaseEnabled };
+// Save or overwrite card in SQLite REST API (validates password hashed comparison on backend)
+export async function saveCard(card: BusinessCard): Promise<void> {
+  try {
+    const response = await fetch(`${getApiUrl()}/api/cards`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(card),
+    });
+
+    if (!response.ok) {
+      const errRes = await response.json().catch(() => ({}));
+      throw new Error(errRes.error || "명함 저장에 실패했습니다.");
+    }
+  } catch (error) {
+    console.error("Error calling saveCard API:", error);
+    throw error;
+  }
+}
+

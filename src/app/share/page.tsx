@@ -114,12 +114,7 @@ function CardViewerContent() {
     return `linear-gradient(${angle}deg, ${c.gradientStart} 0%, ${c.gradientEnd} 100%)`;
   };
 
-  const contrastColor = card.bgType === "gradient" 
-    ? getGradientContrastColor(card.gradientStart, card.gradientEnd)
-    : card.bgType === "solid" && card.bgColor
-    ? getContrastTextColor(card.bgColor)
-    : "text-white";
-  const mutedContrastColor = contrastColor === 'text-slate-900' ? 'text-slate-700' : 'text-white/70';
+
 
   return (
     <div className="relative flex flex-col items-center justify-start min-h-screen w-full bg-[#0d0f12] text-foreground font-sans selection:bg-serenity/30 overflow-y-auto pb-24">
@@ -227,12 +222,17 @@ function CardViewerContent() {
                     }}
                   >
                     {card.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img 
-                        src={card.avatarUrl} 
-                        alt="Profile" 
-                        className="w-full h-full rounded-full object-cover bg-neutral-800"
-                      />
+                      <div className="w-full h-full rounded-full overflow-hidden relative pointer-events-none">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={card.avatarUrl} 
+                          alt="Profile" 
+                          className="w-full h-full object-cover bg-neutral-800 origin-center select-none"
+                          style={{
+                            transform: `scale(${card.avatarZoom ?? 1}) translate(${(card.avatarX ?? 0) / (card.avatarZoom ?? 1)}%, ${(card.avatarY ?? 0) / (card.avatarZoom ?? 1)}%)`
+                          }}
+                        />
+                      </div>
                     ) : (
                       <div 
                         className="w-full h-full rounded-full bg-neutral-900/40 flex items-center justify-center text-[10px] font-bold"
@@ -443,6 +443,60 @@ function CardViewerContent() {
             <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-line pl-2">
               {card.bio}
             </p>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 4: Social & Portfolio Links */}
+      {card.links && card.links.length > 0 && (
+        <section className="w-full max-w-[450px] px-6 py-12 flex flex-col gap-6 snap-start border-t border-card-border/50">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-widest text-serenity">PORTFOLIOS & SNS</span>
+            <h2 className="text-xl font-semibold">프로필 링크</h2>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {card.links.map((link) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-4 rounded-2xl bg-card-bg border border-card-border backdrop-blur-md group hover:bg-white/5 transition duration-300 cursor-pointer"
+              >
+                <div className="flex items-center flex-1">
+                  {/* 왼쪽 사진/아이콘 */}
+                  {link.iconUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={link.iconUrl}
+                      alt={link.title}
+                      className="w-11 h-11 rounded-xl object-cover border border-card-border bg-neutral-900 mr-3.5 group-hover:scale-105 transition duration-300"
+                    />
+                  ) : (
+                    <div className="w-11 h-11 rounded-xl border border-card-border bg-neutral-900/60 flex items-center justify-center mr-3.5 text-muted-foreground text-xs font-bold uppercase">
+                      LINK
+                    </div>
+                  )}
+
+                  {/* 가운데 글 */}
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-bold text-white group-hover:text-serenity transition">
+                      {link.title || "링크 바로가기"}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground font-mono truncate max-w-[200px]">
+                      {link.url}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 오른쪽 얇은 색깔 선 */}
+                <div 
+                  className="w-[3px] h-9 rounded-full ml-3"
+                  style={{ backgroundColor: link.borderColor || "#92a8d1" }}
+                />
+              </a>
+            ))}
           </div>
         </section>
       )}

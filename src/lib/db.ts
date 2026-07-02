@@ -1,5 +1,16 @@
-import { db, isFirebaseEnabled } from "./firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { 
+  getCard as fetchRemoteCard, 
+  saveCard as saveRemoteCard, 
+  isFirebaseEnabled 
+} from "./firebase";
+
+export interface ProfileLink {
+  id: string;
+  iconUrl?: string; // 왼쪽 이미지 URL
+  title: string; // 설명/글
+  url: string; // 이동할 실제 URL
+  borderColor?: string; // 오른쪽 얇은 색상 선 색깔
+}
 
 export interface CardShape {
   id: string;
@@ -38,6 +49,9 @@ export interface BusinessCard {
   textColor: string;
   fontFamily: string;
   avatarUrl?: string; // base64 or external url
+  avatarZoom?: number; // 1.0 to 3.0 scale
+  avatarX?: number; // percentage offset X
+  avatarY?: number; // percentage offset Y
 
   // [NEW] 배경 타입 및 커스텀 배경 리소스 데이터
   bgType: "gradient" | "svg" | "image" | "solid";
@@ -52,6 +66,8 @@ export interface BusinessCard {
   shapes: CardShape[];
 
   password?: string; // 비밀번호 보호 필드
+
+  links?: ProfileLink[]; // 추가 프로필 소셜/포트폴리오 링크 목록
 
   createdAt: number;
 }
@@ -74,6 +90,9 @@ export const DEFAULT_CARD: BusinessCard = {
   borderColor: "rgba(255, 255, 255, 0.15)",
   textColor: "#ffffff",
   fontFamily: "var(--font-outfit)",
+  avatarZoom: 1,
+  avatarX: 0,
+  avatarY: 0,
   bgType: "gradient",
   bgColor: "#13171f",
   bgSvgContent: "",
@@ -126,21 +145,37 @@ export const DEFAULT_CARD: BusinessCard = {
       color: "#92a8d1" // serenity decorative line
     }
   ],
+  links: [
+    {
+      id: "link-1",
+      title: "공식 포트폴리오 웹사이트",
+      url: "https://gildong.io",
+      iconUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=150&auto=format&fit=crop&q=60",
+      borderColor: "#92a8d1"
+    },
+    {
+      id: "link-2",
+      title: "인스타그램 SNS",
+      url: "https://instagram.com",
+      iconUrl: "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=150&auto=format&fit=crop&q=60",
+      borderColor: "#f7caca"
+    }
+  ],
   createdAt: Date.now(),
 };
 
 /**
- * Saves a business card to either Firestore or LocalStorage.
+ * Saves a business card to either Remote SQLite API or LocalStorage.
  * Returns the card ID.
  */
 export async function saveCard(card: BusinessCard): Promise<string> {
-  if (isFirebaseEnabled && db) {
+  if (isFirebaseEnabled) {
     try {
-      const cardRef = doc(db, "cards", card.id);
-      await setDoc(cardRef, card);
+      await saveRemoteCard(card);
       return card.id;
     } catch (error) {
-      console.error("Failed to save card to Firestore, falling back to LocalStorage:", error);
+      console.error("Failed to save card to SQLite API, falling back to LocalStorage:", error);
+      throw error;
     }
   }
 
@@ -152,19 +187,18 @@ export async function saveCard(card: BusinessCard): Promise<string> {
 }
 
 /**
- * Gets a business card by ID from either Firestore or LocalStorage.
+ * Gets a business card by ID from either Remote SQLite API or LocalStorage.
  */
 export async function getCard(id: string): Promise<BusinessCard | null> {
-  // If Firestore is enabled
-  if (isFirebaseEnabled && db) {
+  // If Remote API is enabled
+  if (isFirebaseEnabled) {
     try {
-      const cardRef = doc(db, "cards", id);
-      const cardSnap = await getDoc(cardRef);
-      if (cardSnap.exists()) {
-        return cardSnap.data() as BusinessCard;
+      const remoteCard = await fetchRemoteCard(id);
+      if (remoteCard) {
+        return remoteCard;
       }
     } catch (error) {
-      console.error("Failed to fetch card from Firestore, checking LocalStorage:", error);
+      console.error("Failed to fetch card from SQLite API, checking LocalStorage:", error);
     }
   }
 

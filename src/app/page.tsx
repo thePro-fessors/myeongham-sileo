@@ -61,6 +61,10 @@ export default function AppDashboard() {
   const [passwordError, setPasswordError] = useState("");
   const [pendingCard, setPendingCard] = useState<BusinessCard | null>(null);
 
+  // Profile Avatar Dragging States
+  const [isAvatarDragging, setIsAvatarDragging] = useState(false);
+  const avatarDragStartRef = useRef<{ mouseX: number; mouseY: number; startX: number; startY: number } | null>(null);
+
   // Figma Canvas Editing States
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -283,6 +287,55 @@ export default function AppDashboard() {
       } catch (err) {
         // ignore
       }
+    }
+  };
+
+  const handleAvatarPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setIsAvatarDragging(true);
+    avatarDragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      startX: myCard.avatarX || 0,
+      startY: myCard.avatarY || 0
+    };
+  };
+
+  const handleAvatarPointerMove = (e: React.PointerEvent) => {
+    if (!isAvatarDragging || !avatarDragStartRef.current) return;
+    e.stopPropagation();
+    const dragStart = avatarDragStartRef.current;
+    const deltaX = e.clientX - dragStart.mouseX;
+    const deltaY = e.clientY - dragStart.mouseY;
+
+    // 감도 및 줌에 비례한 이동 비율 가감
+    const zoom = myCard.avatarZoom || 1;
+    const scaleFactor = 0.5;
+    const nextX = dragStart.startX + deltaX * scaleFactor;
+    const nextY = dragStart.startY + deltaY * scaleFactor;
+
+    const clampedX = Math.max(-150, Math.min(150, nextX));
+    const clampedY = Math.max(-150, Math.min(150, nextY));
+
+    setMyCard((prev) => {
+      const updated = {
+        ...prev,
+        avatarX: clampedX,
+        avatarY: clampedY
+      };
+      localStorage.setItem("my-business-card", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleAvatarPointerUp = (e: React.PointerEvent) => {
+    if (isAvatarDragging) {
+      setIsAvatarDragging(false);
+      avatarDragStartRef.current = null;
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch (err) {}
     }
   };
 
@@ -540,7 +593,16 @@ export default function AppDashboard() {
           ctx.beginPath();
           ctx.arc(canvas.width - 90, 90, 50, 0, Math.PI * 2);
           ctx.clip();
-          ctx.drawImage(avatarImg, canvas.width - 140, 40, 100, 100);
+          
+          const zoom = myCard.avatarZoom || 1.0;
+          const offX = myCard.avatarX || 0;
+          const offY = myCard.avatarY || 0;
+          const drawW = 100 * zoom;
+          const drawH = 100 * zoom;
+          const drawX = (canvas.width - 90) - (drawW / 2) + offX;
+          const drawY = 90 - (drawH / 2) + offY;
+
+          ctx.drawImage(avatarImg, drawX, drawY, drawW, drawH);
           ctx.restore();
         };
       } else {
@@ -628,6 +690,47 @@ export default function AppDashboard() {
   const handleDeleteFromWallet = (cardId: string) => {
     removeCardFromWallet(cardId);
     setWalletCards(getSavedCards());
+  };
+
+  const addProfileLink = () => {
+    const newLink = {
+      id: `link-${Date.now()}`,
+      title: "",
+      url: "",
+      iconUrl: "",
+      borderColor: "#92a8d1"
+    };
+    setMyCard((prev) => {
+      const updated = {
+        ...prev,
+        links: [...(prev.links || []), newLink]
+      };
+      localStorage.setItem("my-business-card", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const updateProfileLink = (linkId: string, field: string, value: string) => {
+    setMyCard((prev) => {
+      const updatedLinks = (prev.links || []).map((lnk) => {
+        if (lnk.id === linkId) {
+          return { ...lnk, [field]: value };
+        }
+        return lnk;
+      });
+      const updated = { ...prev, links: updatedLinks };
+      localStorage.setItem("my-business-card", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const deleteProfileLink = (linkId: string) => {
+    setMyCard((prev) => {
+      const updatedLinks = (prev.links || []).filter((lnk) => lnk.id !== linkId);
+      const updated = { ...prev, links: updatedLinks };
+      localStorage.setItem("my-business-card", JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/share/?id=${myCard.id}` : "";
@@ -786,18 +889,26 @@ export default function AppDashboard() {
 
                         {/* 둥근 프로필 아바타 프레임 */}
                         <div
-                          className="w-14 h-14 rounded-full p-[1.5px]"
+                          className="w-14 h-14 rounded-full p-[1.5px] select-none cursor-move relative"
                           style={{
                             background: getGradientString(myCard)
                           }}
+                          onPointerDown={handleAvatarPointerDown}
+                          onPointerMove={handleAvatarPointerMove}
+                          onPointerUp={handleAvatarPointerUp}
                         >
                           {myCard.avatarUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={myCard.avatarUrl}
-                              alt="Profile"
-                              className="w-full h-full rounded-full object-cover bg-neutral-800"
-                            />
+                            <div className="w-full h-full rounded-full overflow-hidden relative pointer-events-none">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={myCard.avatarUrl}
+                                alt="Profile"
+                                className="w-full h-full object-cover bg-neutral-800 origin-center select-none"
+                                style={{
+                                  transform: `scale(${myCard.avatarZoom ?? 1}) translate(${(myCard.avatarX ?? 0) / (myCard.avatarZoom ?? 1)}%, ${(myCard.avatarY ?? 0) / (myCard.avatarZoom ?? 1)}%)`
+                                }}
+                              />
+                            </div>
                           ) : (
                             <div 
                               className="w-full h-full rounded-full bg-neutral-900/40 flex items-center justify-center text-[10px] font-bold"
@@ -1516,18 +1627,77 @@ export default function AppDashboard() {
                   </div>
 
                   {/* Profile Image URL */}
-                  <div className="flex flex-col gap-1.5 sm:col-span-2">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-serenity" /> 프로필 이미지 URL
-                    </label>
-                    <input
-                      type="text"
-                      name="avatarUrl"
-                      value={myCard.avatarUrl || ""}
-                      onChange={handleInputChange}
-                      className="px-3.5 py-2.5 rounded-xl bg-white/2 border border-card-border text-xs focus:border-serenity focus:outline-none transition"
-                      placeholder="프로필 사진 이미지 인터넷 주소"
-                    />
+                  <div className="flex flex-col gap-3 sm:col-span-2">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-serenity" /> 프로필 이미지 URL
+                      </label>
+                      <input
+                        type="text"
+                        name="avatarUrl"
+                        value={myCard.avatarUrl || ""}
+                        onChange={handleInputChange}
+                        className="px-3.5 py-2.5 rounded-xl bg-white/2 border border-card-border text-xs focus:border-serenity focus:outline-none transition"
+                        placeholder="프로필 사진 이미지 인터넷 주소"
+                      />
+                    </div>
+
+                    {myCard.avatarUrl && (
+                      <div className="bg-[#13171f]/50 border border-card-border rounded-xl p-3.5 flex flex-col gap-3.5 animate-fade-in mt-1">
+                        <div className="flex justify-between items-center border-b border-card-border/50 pb-1.5">
+                          <span className="text-[10px] font-bold text-serenity uppercase">프로필 사진 틀(영역) 세부 조절</span>
+                          <span className="text-[9px] text-muted-foreground">사진을 누른 채 드래그해도 조절됩니다.</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-[9px] text-muted-foreground uppercase font-bold">
+                              <span>사진 크기 (Zoom)</span>
+                              <span className="font-mono text-serenity">{Math.round((myCard.avatarZoom ?? 1) * 100)}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="1"
+                              max="3"
+                              step="0.05"
+                              value={myCard.avatarZoom ?? 1}
+                              onChange={(e) => handleStyleChange("avatarZoom", parseFloat(e.target.value))}
+                              className="w-full accent-serenity cursor-pointer"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-[9px] text-muted-foreground uppercase font-bold">
+                              <span>가로 이동 (X)</span>
+                              <span className="font-mono text-serenity">{Math.round(myCard.avatarX ?? 0)}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="-100"
+                              max="100"
+                              value={myCard.avatarX ?? 0}
+                              onChange={(e) => handleStyleChange("avatarX", parseInt(e.target.value))}
+                              className="w-full accent-serenity cursor-pointer"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <div className="flex justify-between text-[9px] text-muted-foreground uppercase font-bold">
+                              <span>세로 이동 (Y)</span>
+                              <span className="font-mono text-serenity">{Math.round(myCard.avatarY ?? 0)}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="-100"
+                              max="100"
+                              value={myCard.avatarY ?? 0}
+                              onChange={(e) => handleStyleChange("avatarY", parseInt(e.target.value))}
+                              className="w-full accent-serenity cursor-pointer"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Introduction (Bio) */}
@@ -1544,6 +1714,99 @@ export default function AppDashboard() {
                       placeholder="나를 소개하는 멋진 문구를 적어보세요..."
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* PANEL 4: Profile Links Customizer Panel */}
+              <div className="bg-card-bg border border-card-border rounded-2xl p-5 backdrop-blur-md flex flex-col gap-4">
+                <div className="flex justify-between items-center border-b border-card-border/50 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <ExternalLink className="w-4 h-4 text-serenity" />
+                    <h3 className="text-xs font-bold text-foreground">상세 프로필 링크 정보 설정</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addProfileLink}
+                    className="px-3 py-1.5 bg-serenity text-slate-900 rounded-lg text-[10px] font-bold hover:scale-[1.02] active:scale-[0.98] transition cursor-pointer"
+                  >
+                    + 링크 추가
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-4 max-h-[300px] overflow-y-auto pr-1">
+                  {(myCard.links || []).length === 0 ? (
+                    <div className="text-center py-6 text-xs text-muted-foreground">
+                      추가된 상세 프로필 링크가 없습니다. 링크 추가 버튼을 눌러보세요!
+                    </div>
+                  ) : (
+                    (myCard.links || []).map((link, idx) => (
+                      <div 
+                        key={link.id} 
+                        className="bg-[#13171f]/50 border border-card-border rounded-xl p-3.5 flex flex-col gap-3 relative animate-fade-in"
+                        style={{ borderRight: `4px solid ${link.borderColor || "#92a8d1"}` }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-serenity"># {idx + 1} 프로필 링크</span>
+                          <button
+                            type="button"
+                            onClick={() => deleteProfileLink(link.id)}
+                            className="p-1 rounded-lg text-rose-quartz/60 hover:text-rose-quartz hover:bg-rose-quartz/10 transition cursor-pointer"
+                            title="링크 삭제"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase">링크 이름</span>
+                            <input
+                              type="text"
+                              value={link.title}
+                              onChange={(e) => updateProfileLink(link.id, "title", e.target.value)}
+                              className="px-2.5 py-1.5 rounded-lg bg-[#0d0f12] border border-card-border text-xs text-white focus:border-serenity focus:outline-none"
+                              placeholder="예: 내 포트폴리오 사이트"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase">이동 주소 (URL)</span>
+                            <input
+                              type="text"
+                              value={link.url}
+                              onChange={(e) => updateProfileLink(link.id, "url", e.target.value)}
+                              className="px-2.5 py-1.5 rounded-lg bg-[#0d0f12] border border-card-border text-xs text-white focus:border-serenity focus:outline-none"
+                              placeholder="https://example.com"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase">아이콘 이미지 주소 (URL)</span>
+                            <input
+                              type="text"
+                              value={link.iconUrl || ""}
+                              onChange={(e) => updateProfileLink(link.id, "iconUrl", e.target.value)}
+                              className="px-2.5 py-1.5 rounded-lg bg-[#0d0f12] border border-card-border text-xs text-white focus:border-serenity focus:outline-none"
+                              placeholder="https://example.com/icon.png"
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase">우측 포인트 색상</span>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="color"
+                                value={link.borderColor || "#92a8d1"}
+                                onChange={(e) => updateProfileLink(link.id, "borderColor", e.target.value)}
+                                className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent"
+                              />
+                              <span className="text-[10px] font-mono">{link.borderColor || "#92a8d1"}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
