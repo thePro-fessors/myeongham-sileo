@@ -15,9 +15,11 @@ import {
   Check, 
   ChevronDown, 
   ArrowLeft,
-  Share2
+  Share2,
+  ExternalLink
 } from "lucide-react";
 import Link from "next/link";
+import { getGradientContrastColor, getContrastTextColor } from "@/lib/colorUtils";
 
 function CardViewerContent() {
   const searchParams = useSearchParams();
@@ -112,6 +114,13 @@ function CardViewerContent() {
     return `linear-gradient(${angle}deg, ${c.gradientStart} 0%, ${c.gradientEnd} 100%)`;
   };
 
+  const contrastColor = card.bgType === "gradient" 
+    ? getGradientContrastColor(card.gradientStart, card.gradientEnd)
+    : card.bgType === "solid" && card.bgColor
+    ? getContrastTextColor(card.bgColor)
+    : "text-white";
+  const mutedContrastColor = contrastColor === 'text-slate-900' ? 'text-slate-700' : 'text-white/70';
+
   return (
     <div className="relative flex flex-col items-center justify-start min-h-screen w-full bg-[#0d0f12] text-foreground font-sans selection:bg-serenity/30 overflow-y-auto pb-24">
       {/* Top Header Floating Utility */}
@@ -144,7 +153,7 @@ function CardViewerContent() {
         <div 
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] sm:w-[350px] h-[250px] sm:h-[350px] rounded-full blur-[100px] opacity-15 pointer-events-none"
           style={{
-            background: getGradientString(card)
+            background: card.bgType === "solid" ? card.bgColor : getGradientString(card)
           }}
         />
 
@@ -152,7 +161,7 @@ function CardViewerContent() {
         <div 
           className="relative w-full max-w-[340px] sm:max-w-[380px] aspect-[1.586/1] rounded-2xl p-[1.5px] shadow-2xl transition duration-500 hover:scale-[1.02]"
           style={{
-            background: getGradientString(card)
+            background: card.bgType === "solid" ? card.bgColor : getGradientString(card)
           }}
         >
           {/* Card Content Wrapper */}
@@ -163,6 +172,8 @@ function CardViewerContent() {
                 backgroundImage: `url(${card.bgImageUrl})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center"
+              } : card.bgType === "solid" && card.bgColor ? {
+                backgroundColor: card.bgColor
               } : card.bgType === "gradient" ? {
                 background: getGradientString(card)
               } : {
@@ -185,9 +196,9 @@ function CardViewerContent() {
                 {/* Top Row: Info badge & Avatar */}
                 <div className="flex justify-between items-start w-full">
                   <div className="flex flex-col gap-1.5 items-start">
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">PREVIEW CARD</span>
+                    <span className={`text-[9px] uppercase tracking-wider font-semibold ${mutedContrastColor}`}>PREVIEW CARD</span>
                     {card.company && (
-                      <span className="text-[10px] font-medium text-serenity bg-[#0d0f12]/60 px-3 py-1 rounded-full border border-serenity/20 backdrop-blur-md">
+                      <span className={`text-[10px] font-medium px-3 py-1 rounded-full border backdrop-blur-md ${contrastColor === 'text-slate-900' ? 'bg-white/40 border-black/20 text-slate-900' : 'bg-[#0d0f12]/60 border-serenity/20 text-serenity'}`}>
                         {card.company}
                       </span>
                     )}
@@ -197,7 +208,7 @@ function CardViewerContent() {
                   <div 
                     className="w-14 h-14 rounded-full p-[1.5px]"
                     style={{
-                      background: getGradientString(card)
+                      background: card.bgType === "solid" ? card.bgColor : getGradientString(card)
                     }}
                   >
                     {card.avatarUrl ? (
@@ -208,7 +219,7 @@ function CardViewerContent() {
                         className="w-full h-full rounded-full object-cover bg-neutral-800"
                       />
                     ) : (
-                      <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                      <div className={`w-full h-full rounded-full bg-neutral-900/40 flex items-center justify-center text-[10px] font-bold ${mutedContrastColor}`}>
                         IMG
                       </div>
                     )}
@@ -218,17 +229,17 @@ function CardViewerContent() {
                 {/* Bottom Row: Name Block */}
                 <div className="flex flex-col gap-0.5 items-start mt-auto">
                   <div className="flex items-baseline gap-1.5">
-                    <h1 className="text-xl font-bold tracking-tight text-white">
+                    <h1 className={`text-xl font-bold tracking-tight ${contrastColor}`}>
                       {card.name || "이름"}
                     </h1>
                     {card.engName && (
-                      <span className="text-xs font-light text-muted-foreground italic">
+                      <span className={`text-xs font-light italic ${mutedContrastColor}`}>
                         {card.engName}
                       </span>
                     )}
                   </div>
                   {card.phone && (
-                    <span className="text-[11px] text-muted-foreground/80 font-mono tracking-wide">
+                    <span className={`text-[11px] font-mono tracking-wide ${mutedContrastColor}`}>
                       {card.phone}
                     </span>
                   )}

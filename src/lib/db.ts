@@ -40,9 +40,10 @@ export interface BusinessCard {
   avatarUrl?: string; // base64 or external url
 
   // [NEW] 배경 타입 및 커스텀 배경 리소스 데이터
-  bgType: "gradient" | "svg" | "image";
+  bgType: "gradient" | "svg" | "image" | "solid";
   bgSvgContent?: string;
   bgImageUrl?: string;
+  bgColor?: string;
 
   // [NEW] 기본 테두리 및 프로필 레이아웃 템플릿 적용 여부
   useDefaultTemplate: boolean;
@@ -72,6 +73,7 @@ export const DEFAULT_CARD: BusinessCard = {
   textColor: "#ffffff",
   fontFamily: "var(--font-outfit)",
   bgType: "gradient",
+  bgColor: "#13171f",
   bgSvgContent: "",
   bgImageUrl: "",
   useDefaultTemplate: true,

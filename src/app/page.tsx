@@ -9,6 +9,7 @@ import {
   getSavedCards, 
   removeCardFromWallet 
 } from "@/lib/db";
+import { getGradientContrastColor, getContrastTextColor } from "@/lib/colorUtils";
 import { QRCodeSVG } from "qrcode.react";
 import { 
   Settings, 
@@ -312,8 +313,12 @@ export default function AppDashboard() {
     return `linear-gradient(${angle}deg, ${card.gradientStart} 0%, ${card.gradientEnd} 100%)`;
   };
 
-  // Dynamic Background Style Builder for Card Preview
   const getCardBackgroundStyle = (): React.CSSProperties => {
+    if (myCard.bgType === "solid" && myCard.bgColor) {
+      return {
+        backgroundColor: myCard.bgColor,
+      };
+    }
     if (myCard.bgType === "image" && myCard.bgImageUrl) {
       return {
         backgroundImage: `url(${myCard.bgImageUrl})`,
@@ -330,6 +335,13 @@ export default function AppDashboard() {
       backgroundColor: "#13171f",
     };
   };
+
+  const contrastColor = myCard.bgType === "gradient" 
+    ? getGradientContrastColor(myCard.gradientStart, myCard.gradientEnd)
+    : myCard.bgType === "solid" && myCard.bgColor
+    ? getContrastTextColor(myCard.bgColor)
+    : "text-white";
+  const mutedContrastColor = contrastColor === 'text-slate-900' ? 'text-slate-700' : 'text-white/70';
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0d0f12] text-foreground font-sans pb-16">
@@ -392,6 +404,8 @@ export default function AppDashboard() {
                 style={{
                   background: myCard.bgType === "gradient" 
                     ? getGradientString(myCard)
+                    : myCard.bgType === "solid"
+                    ? myCard.bgColor
                     : "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)"
                 }}
                 onPointerDown={(e) => {
@@ -420,9 +434,9 @@ export default function AppDashboard() {
                       {/* Top Row: Info badge & Avatar */}
                       <div className="flex justify-between items-start w-full">
                         <div className="flex flex-col gap-1.5 items-start">
-                          <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">PREVIEW CARD</span>
+                          <span className={`text-[9px] uppercase tracking-wider font-semibold ${mutedContrastColor}`}>PREVIEW CARD</span>
                           {myCard.company && (
-                            <span className="text-[10px] font-medium text-serenity bg-[#0d0f12]/60 px-3 py-1 rounded-full border border-serenity/20 backdrop-blur-md">
+                            <span className={`text-[10px] font-medium px-3 py-1 rounded-full border backdrop-blur-md ${contrastColor === 'text-slate-900' ? 'bg-white/40 border-black/20 text-slate-900' : 'bg-[#0d0f12]/60 border-serenity/20 text-serenity'}`}>
                               {myCard.company}
                             </span>
                           )}
@@ -443,7 +457,7 @@ export default function AppDashboard() {
                               className="w-full h-full rounded-full object-cover bg-neutral-800"
                             />
                           ) : (
-                            <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                            <div className={`w-full h-full rounded-full bg-neutral-900/40 flex items-center justify-center text-[10px] font-bold ${mutedContrastColor}`}>
                               IMG
                             </div>
                           )}
@@ -453,17 +467,17 @@ export default function AppDashboard() {
                       {/* Bottom Row: Name Block */}
                       <div className="flex flex-col gap-0.5 items-start mt-auto">
                         <div className="flex items-baseline gap-1.5">
-                          <h1 className="text-xl font-bold tracking-tight text-white">
+                          <h1 className={`text-xl font-bold tracking-tight ${contrastColor}`}>
                             {myCard.name || "이름"}
                           </h1>
                           {myCard.engName && (
-                            <span className="text-xs font-light text-muted-foreground italic">
+                            <span className={`text-xs font-light italic ${mutedContrastColor}`}>
                               {myCard.engName}
                             </span>
                           )}
                         </div>
                         {myCard.phone && (
-                          <span className="text-[11px] text-muted-foreground/80 font-mono tracking-wide">
+                          <span className={`text-[11px] font-mono tracking-wide ${mutedContrastColor}`}>
                             {myCard.phone}
                           </span>
                         )}
@@ -822,8 +836,16 @@ export default function AppDashboard() {
                 {/* Background Type Selection */}
                 <div className="flex gap-2 p-1 bg-[#13171f] border border-card-border rounded-xl">
                   <button
+                    onClick={() => handleStyleChange("bgType", "solid")}
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${
+                      myCard.bgType === "solid" ? "bg-serenity text-slate-900" : "text-muted-foreground"
+                    }`}
+                  >
+                    단색
+                  </button>
+                  <button
                     onClick={() => handleStyleChange("bgType", "gradient")}
-                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition ${
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${
                       myCard.bgType === "gradient" ? "bg-serenity text-slate-900" : "text-muted-foreground"
                     }`}
                   >
@@ -831,21 +853,43 @@ export default function AppDashboard() {
                   </button>
                   <button
                     onClick={() => handleStyleChange("bgType", "image")}
-                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition ${
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${
                       myCard.bgType === "image" ? "bg-serenity text-slate-900" : "text-muted-foreground"
                     }`}
                   >
-                    PNG/JPG 이미지
+                    이미지
                   </button>
                   <button
                     onClick={() => handleStyleChange("bgType", "svg")}
-                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition ${
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${
                       myCard.bgType === "svg" ? "bg-serenity text-slate-900" : "text-muted-foreground"
                     }`}
                   >
-                    SVG 코드
+                    SVG
                   </button>
                 </div>
+
+                {/* 0. Solid Color Panel */}
+                {myCard.bgType === "solid" && (
+                  <div className="flex flex-col gap-1.5 animate-fade-in">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">배경 단색 설정</span>
+                    <div className="flex items-center gap-3 bg-[#13171f] border border-card-border p-2 rounded-xl">
+                      <input 
+                        type="color" 
+                        value={myCard.bgColor || "#000000"} 
+                        onChange={(e) => handleStyleChange("bgColor", e.target.value)}
+                        className="w-10 h-10 rounded-lg cursor-pointer border-none bg-transparent"
+                      />
+                      <input 
+                        type="text" 
+                        value={myCard.bgColor || "#000000"}
+                        onChange={(e) => handleStyleChange("bgColor", e.target.value)}
+                        className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-white placeholder-muted-foreground"
+                        placeholder="#000000"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* 1. Gradient Panel */}
                 {myCard.bgType === "gradient" && (
