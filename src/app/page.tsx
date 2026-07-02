@@ -1,28 +1,28 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  BusinessCard, 
+import {
+  BusinessCard,
   CardShape,
-  DEFAULT_CARD, 
-  saveCard, 
-  getSavedCards, 
-  removeCardFromWallet 
+  DEFAULT_CARD,
+  saveCard,
+  getSavedCards,
+  removeCardFromWallet
 } from "@/lib/db";
 import { getGradientContrastColor, getContrastTextColor } from "@/lib/colorUtils";
 import { QRCodeSVG } from "qrcode.react";
-import { 
-  Settings, 
-  User, 
-  Phone, 
-  Mail, 
-  Building, 
-  FileText, 
-  Palette, 
-  Save, 
-  Share2, 
-  Copy, 
-  Check, 
+import {
+  Settings,
+  User,
+  Phone,
+  Mail,
+  Building,
+  FileText,
+  Palette,
+  Save,
+  Share2,
+  Copy,
+  Check,
   ExternalLink,
   Trash2,
   FolderOpen,
@@ -154,7 +154,7 @@ export default function AppDashboard() {
   const handlePointerDown = (e: React.PointerEvent, shapeId: string) => {
     e.stopPropagation();
     setSelectedShapeId(shapeId);
-    
+
     const shape = myCard.shapes.find((s) => s.id === shapeId);
     if (!shape) return;
 
@@ -174,7 +174,7 @@ export default function AppDashboard() {
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const dragStart = dragStartRef.current;
-    
+
     const deltaX = e.clientX - dragStart.mouseX;
     const deltaY = e.clientY - dragStart.mouseY;
 
@@ -270,11 +270,11 @@ export default function AppDashboard() {
       id: customCardId.trim() || `card-${Date.now().toString().slice(-6)}`,
       createdAt: Date.now()
     };
-    
+
     await saveCard(updatedCard);
     setMyCard(updatedCard);
     localStorage.setItem("my-business-card", JSON.stringify(updatedCard));
-    
+
     try {
       await Preferences.set({
         key: "my_card_id",
@@ -336,11 +336,11 @@ export default function AppDashboard() {
     };
   };
 
-  const contrastColor = myCard.bgType === "gradient" 
+  const contrastColor = myCard.bgType === "gradient"
     ? getGradientContrastColor(myCard.gradientStart, myCard.gradientEnd)
     : myCard.bgType === "solid" && myCard.bgColor
-    ? getContrastTextColor(myCard.bgColor)
-    : "text-white";
+      ? getContrastTextColor(myCard.bgColor)
+      : "text-white";
   const mutedContrastColor = contrastColor === 'text-slate-900' ? 'text-slate-700' : 'text-white/70';
 
   return (
@@ -361,22 +361,20 @@ export default function AppDashboard() {
 
         {/* Tab Toggle buttons */}
         <div className="flex bg-card-bg border border-card-border p-1 rounded-full">
-          <button 
+          <button
             onClick={() => setActiveTab("edit")}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer ${
-              activeTab === "edit" ? "bg-gradient-to-r from-serenity to-rose-quartz text-slate-900 shadow-md" : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer ${activeTab === "edit" ? "bg-gradient-to-r from-serenity to-rose-quartz text-slate-900 shadow-md" : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             명함 메이커
           </button>
-          <button 
+          <button
             onClick={() => {
               setActiveTab("wallet");
               setWalletCards(getSavedCards());
             }}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer ${
-              activeTab === "wallet" ? "bg-gradient-to-r from-serenity to-rose-quartz text-slate-900 shadow-md" : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer ${activeTab === "wallet" ? "bg-gradient-to-r from-serenity to-rose-quartz text-slate-900 shadow-md" : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             내 명함첩 ({walletCards.length})
           </button>
@@ -398,15 +396,15 @@ export default function AppDashboard() {
               </div>
 
               {/* Interactive Design Board Wrapper */}
-              <div 
+              <div
                 ref={canvasRef}
                 className="w-full aspect-[1.586/1] rounded-2xl p-[1.5px] shadow-2xl relative select-none overflow-hidden"
                 style={{
-                  background: myCard.bgType === "gradient" 
+                  background: myCard.bgType === "gradient"
                     ? getGradientString(myCard)
                     : myCard.bgType === "solid"
-                    ? myCard.bgColor
-                    : "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)"
+                      ? myCard.bgColor
+                      : "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)"
                 }}
                 onPointerDown={(e) => {
                   if (e.target === e.currentTarget) {
@@ -415,13 +413,13 @@ export default function AppDashboard() {
                 }} // Click canvas blank space to deselect
               >
                 {/* Visual Glass Inner Card Workspace */}
-                <div 
+                <div
                   className="w-full h-full bg-[#13171f]/95 rounded-[15px] relative overflow-hidden transition-all duration-300"
                   style={getCardBackgroundStyle()}
                 >
                   {/* Dynamic SVG background support */}
                   {myCard.bgType === "svg" && myCard.bgSvgContent && (
-                    <div 
+                    <div
                       className="absolute inset-0 z-0 pointer-events-none opacity-80"
                       dangerouslySetInnerHTML={{ __html: myCard.bgSvgContent }}
                     />
@@ -430,7 +428,7 @@ export default function AppDashboard() {
                   {/* 1. 원래 스크린샷 템플릿 디자인 오버레이 (useDefaultTemplate이 true일 때만) */}
                   {myCard.useDefaultTemplate && (
                     <div className="absolute inset-0 w-full h-full z-0 p-5 flex flex-col justify-between pointer-events-none border border-white/10 rounded-[15px]">
-                      
+
                       {/* Top Row: Info badge & Avatar */}
                       <div className="flex justify-between items-start w-full">
                         <div className="flex flex-col gap-1.5 items-start">
@@ -441,9 +439,9 @@ export default function AppDashboard() {
                             </span>
                           )}
                         </div>
-                        
+
                         {/* 둥근 프로필 아바타 프레임 */}
-                        <div 
+                        <div
                           className="w-14 h-14 rounded-full p-[1.5px]"
                           style={{
                             background: getGradientString(myCard)
@@ -451,9 +449,9 @@ export default function AppDashboard() {
                         >
                           {myCard.avatarUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img 
-                              src={myCard.avatarUrl} 
-                              alt="Profile" 
+                            <img
+                              src={myCard.avatarUrl}
+                              alt="Profile"
                               className="w-full h-full rounded-full object-cover bg-neutral-800"
                             />
                           ) : (
@@ -488,7 +486,7 @@ export default function AppDashboard() {
                   {/* 2. Render custom user shapes dynamically using relative percent layout */}
                   {!myCard.useDefaultTemplate && myCard.shapes.map((shape) => {
                     const isSelected = shape.id === selectedShapeId;
-                    
+
                     // Box styling positioning
                     const shapeStyle: React.CSSProperties = {
                       position: "absolute",
@@ -502,7 +500,7 @@ export default function AppDashboard() {
                     };
 
                     const handleEl = isSelected && (
-                      <div 
+                      <div
                         onPointerDown={(e) => handleResizePointerDown(e, shape.id)}
                         onPointerMove={(e) => handleResizePointerMove(e, shape.id)}
                         onPointerUp={handlePointerUp}
@@ -518,9 +516,8 @@ export default function AppDashboard() {
                           onPointerDown={(e) => handlePointerDown(e, shape.id)}
                           onPointerMove={(e) => handlePointerMove(e, shape.id)}
                           onPointerUp={handlePointerUp}
-                          className={`rounded-sm transition-shadow duration-200 relative ${
-                            isSelected ? "ring-2 ring-serenity ring-offset-2 ring-offset-[#13171f]" : ""
-                          }`}
+                          className={`rounded-sm transition-shadow duration-200 relative ${isSelected ? "ring-2 ring-serenity ring-offset-2 ring-offset-[#13171f]" : ""
+                            }`}
                           style={{
                             ...shapeStyle,
                             backgroundColor: shape.color,
@@ -538,9 +535,8 @@ export default function AppDashboard() {
                           onPointerDown={(e) => handlePointerDown(e, shape.id)}
                           onPointerMove={(e) => handlePointerMove(e, shape.id)}
                           onPointerUp={handlePointerUp}
-                          className={`rounded-full transition-shadow duration-200 relative ${
-                            isSelected ? "ring-2 ring-serenity ring-offset-2 ring-offset-[#13171f]" : ""
-                          }`}
+                          className={`rounded-full transition-shadow duration-200 relative ${isSelected ? "ring-2 ring-serenity ring-offset-2 ring-offset-[#13171f]" : ""
+                            }`}
                           style={{
                             ...shapeStyle,
                             backgroundColor: shape.color,
@@ -552,8 +548,8 @@ export default function AppDashboard() {
                     }
 
                     if (shape.type === "text") {
-                      const textToShow = shape.bindField 
-                        ? (myCard[shape.bindField] || `${shape.bindField} 필드 미기입`) 
+                      const textToShow = shape.bindField
+                        ? (myCard[shape.bindField] || `${shape.bindField} 필드 미기입`)
                         : (shape.text || "텍스트");
 
                       return (
@@ -562,9 +558,8 @@ export default function AppDashboard() {
                           onPointerDown={(e) => handlePointerDown(e, shape.id)}
                           onPointerMove={(e) => handlePointerMove(e, shape.id)}
                           onPointerUp={handlePointerUp}
-                          className={`flex items-center overflow-hidden transition-shadow duration-200 select-none relative ${
-                            isSelected ? "ring-2 ring-serenity ring-offset-2 ring-offset-[#13171f] px-1" : ""
-                          } ${shape.fontWeight === "bold" ? "font-bold" : "font-normal"}`}
+                          className={`flex items-center overflow-hidden transition-shadow duration-200 select-none relative ${isSelected ? "ring-2 ring-serenity ring-offset-2 ring-offset-[#13171f] px-1" : ""
+                            } ${shape.fontWeight === "bold" ? "font-bold" : "font-normal"}`}
                           style={{
                             ...shapeStyle,
                             color: shape.color,
@@ -586,21 +581,21 @@ export default function AppDashboard() {
               {/* Canvas Figma Toolbar */}
               <div className="bg-card-bg border border-card-border p-3.5 rounded-2xl flex items-center justify-between backdrop-blur-md">
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => addShape("rect")}
                     className="flex items-center gap-1.5 px-3 py-2 bg-white/3 hover:bg-white/7 border border-card-border rounded-xl text-xs cursor-pointer text-muted-foreground hover:text-foreground transition"
                   >
                     <Square className="w-3.5 h-3.5" />
                     <span>사각형</span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => addShape("circle")}
                     className="flex items-center gap-1.5 px-3 py-2 bg-white/3 hover:bg-white/7 border border-card-border rounded-xl text-xs cursor-pointer text-muted-foreground hover:text-foreground transition"
                   >
                     <CircleIcon className="w-3.5 h-3.5" />
                     <span>원형</span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => addShape("text")}
                     className="flex items-center gap-1.5 px-3 py-2 bg-white/3 hover:bg-white/7 border border-card-border rounded-xl text-xs cursor-pointer text-muted-foreground hover:text-foreground transition"
                   >
@@ -610,7 +605,7 @@ export default function AppDashboard() {
                 </div>
 
                 {selectedShapeId && (
-                  <button 
+                  <button
                     onClick={deleteSelectedShape}
                     className="flex items-center gap-1.5 px-3 py-2 bg-rose-quartz/10 hover:bg-rose-quartz/20 border border-rose-quartz/20 rounded-xl text-xs cursor-pointer text-rose-quartz transition"
                   >
@@ -633,9 +628,9 @@ export default function AppDashboard() {
                   <span className="text-xs text-muted-foreground font-mono bg-white/3 px-2.5 py-1.5 rounded-lg border border-card-border">
                     /share/?id=
                   </span>
-                  <input 
-                    type="text" 
-                    value={customCardId} 
+                  <input
+                    type="text"
+                    value={customCardId}
                     onChange={(e) => setCustomCardId(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ""))}
                     className="flex-1 px-3 py-1.5 rounded-lg text-xs font-mono bg-white/2 border border-card-border focus:border-serenity focus:outline-none"
                     placeholder="custom-card-id"
@@ -643,7 +638,7 @@ export default function AppDashboard() {
                 </div>
 
                 <div className="flex gap-2 mt-2">
-                  <button 
+                  <button
                     onClick={handlePublish}
                     disabled={publishStatus === "saving"}
                     className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-serenity to-rose-quartz hover:scale-[1.01] active:scale-[0.99] text-slate-900 rounded-full text-xs font-bold transition cursor-pointer shadow-lg"
@@ -651,9 +646,9 @@ export default function AppDashboard() {
                     <Save className="w-3.5 h-3.5" />
                     <span>{publishStatus === "saving" ? "게시 중..." : "클라우드 저장 및 게시"}</span>
                   </button>
-                  
+
                   {myCard.id && (
-                    <Link 
+                    <Link
                       href={`/share/?id=${myCard.id}`}
                       target="_blank"
                       className="px-4 py-2.5 border border-card-border hover:bg-white/5 transition rounded-full text-xs font-bold flex items-center justify-center gap-1 text-muted-foreground hover:text-foreground"
@@ -667,7 +662,7 @@ export default function AppDashboard() {
                 {publishStatus === "success" && (
                   <div className="mt-2 p-3 bg-serenity/10 border border-serenity/20 rounded-xl flex items-center justify-between text-xs animate-fade-in">
                     <span className="text-muted-foreground truncate mr-2 text-[11px]">공유 주소: {shareUrl}</span>
-                    <button 
+                    <button
                       onClick={handleCopyLink}
                       className="text-xs font-bold text-serenity hover:text-white transition flex items-center gap-1 cursor-pointer"
                     >
@@ -681,7 +676,7 @@ export default function AppDashboard() {
 
             {/* RIGHT SIDE: Customization Editor Panels */}
             <div className="flex-1 w-full flex flex-col gap-6">
-              
+
               {/* PANEL 1: Active Layer Element Customizer (Shows only if a shape is focused) */}
               {activeShape ? (
                 <div className="bg-card-bg border border-card-border rounded-2xl p-5 backdrop-blur-md flex flex-col gap-4 border-l-2 border-l-serenity animate-fade-in">
@@ -720,7 +715,7 @@ export default function AppDashboard() {
                       {!activeShape.bindField && (
                         <div className="flex flex-col gap-1.5">
                           <span className="text-[10px] font-bold text-muted-foreground uppercase">텍스트 직접 입력</span>
-                          <input 
+                          <input
                             type="text"
                             value={activeShape.text || ""}
                             onChange={(e) => handleShapePropChange("text", e.target.value)}
@@ -735,7 +730,7 @@ export default function AppDashboard() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase">가로 크기 ({activeShape.width}%)</span>
-                      <input 
+                      <input
                         type="range"
                         min="1"
                         max="100"
@@ -746,7 +741,7 @@ export default function AppDashboard() {
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase">세로 크기 ({activeShape.height}%)</span>
-                      <input 
+                      <input
                         type="range"
                         min="1"
                         max="100"
@@ -762,7 +757,7 @@ export default function AppDashboard() {
                     <div className="flex flex-col gap-1.5">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase">색상 선택</span>
                       <div className="flex items-center gap-2">
-                        <input 
+                        <input
                           type="color"
                           value={activeShape.color}
                           onChange={(e) => handleShapePropChange("color", e.target.value)}
@@ -776,7 +771,7 @@ export default function AppDashboard() {
                     {activeShape.type === "text" && (
                       <div className="flex flex-col gap-1.5">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase">글자 크기 ({activeShape.fontSize}px)</span>
-                        <input 
+                        <input
                           type="range"
                           min="8"
                           max="40"
@@ -791,11 +786,10 @@ export default function AppDashboard() {
                   {activeShape.type === "text" && (
                     <div className="flex items-center gap-3 pt-2">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase">글자 스타일</span>
-                      <button 
+                      <button
                         onClick={() => handleShapePropChange("fontWeight", activeShape.fontWeight === "bold" ? "normal" : "bold")}
-                        className={`p-1.5 rounded-lg border text-xs cursor-pointer transition ${
-                          activeShape.fontWeight === "bold" ? "bg-serenity/20 border-serenity text-serenity" : "bg-white/3 border-card-border text-muted-foreground hover:text-foreground"
-                        }`}
+                        className={`p-1.5 rounded-lg border text-xs cursor-pointer transition ${activeShape.fontWeight === "bold" ? "bg-serenity/20 border-serenity text-serenity" : "bg-white/3 border-card-border text-muted-foreground hover:text-foreground"
+                          }`}
                       >
                         <Bold className="w-3.5 h-3.5" />
                       </button>
@@ -811,24 +805,22 @@ export default function AppDashboard() {
                     <Palette className="w-4.5 h-4.5 text-serenity" />
                     <h3 className="text-xs font-bold">템플릿 설정 및 명함 테마</h3>
                   </div>
-                  
+
                   {/* DEFAULT TEMPLATE ON/OFF TOGGLE SWITCH */}
                   <div className="flex bg-[#13171f] border border-card-border p-1 rounded-xl">
                     <button
                       onClick={() => handleStyleChange("useDefaultTemplate", true)}
-                      className={`flex-1 px-4 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${
-                        myCard.useDefaultTemplate ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
-                      }`}
+                      className={`flex-1 px-4 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${myCard.useDefaultTemplate ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
+                        }`}
                     >
                       Normal
                     </button>
                     <button
                       onClick={() => handleStyleChange("useDefaultTemplate", false)}
-                      className={`flex-1 px-4 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${
-                        !myCard.useDefaultTemplate ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
-                      }`}
+                      className={`flex-1 px-4 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${!myCard.useDefaultTemplate ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
+                        }`}
                     >
-                      Designate
+                      Design
                     </button>
                   </div>
                 </div>
@@ -837,33 +829,29 @@ export default function AppDashboard() {
                 <div className="flex gap-2 p-1 bg-[#13171f] border border-card-border rounded-xl">
                   <button
                     onClick={() => handleStyleChange("bgType", "solid")}
-                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${
-                      myCard.bgType === "solid" ? "bg-serenity text-slate-900" : "text-muted-foreground"
-                    }`}
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${myCard.bgType === "solid" ? "bg-serenity text-slate-900" : "text-muted-foreground"
+                      }`}
                   >
                     단색
                   </button>
                   <button
                     onClick={() => handleStyleChange("bgType", "gradient")}
-                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${
-                      myCard.bgType === "gradient" ? "bg-serenity text-slate-900" : "text-muted-foreground"
-                    }`}
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${myCard.bgType === "gradient" ? "bg-serenity text-slate-900" : "text-muted-foreground"
+                      }`}
                   >
                     그라데이션
                   </button>
                   <button
                     onClick={() => handleStyleChange("bgType", "image")}
-                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${
-                      myCard.bgType === "image" ? "bg-serenity text-slate-900" : "text-muted-foreground"
-                    }`}
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${myCard.bgType === "image" ? "bg-serenity text-slate-900" : "text-muted-foreground"
+                      }`}
                   >
                     이미지
                   </button>
                   <button
                     onClick={() => handleStyleChange("bgType", "svg")}
-                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${
-                      myCard.bgType === "svg" ? "bg-serenity text-slate-900" : "text-muted-foreground"
-                    }`}
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg cursor-pointer transition ${myCard.bgType === "svg" ? "bg-serenity text-slate-900" : "text-muted-foreground"
+                      }`}
                   >
                     SVG
                   </button>
@@ -874,14 +862,14 @@ export default function AppDashboard() {
                   <div className="flex flex-col gap-1.5 animate-fade-in">
                     <span className="text-[10px] font-bold text-muted-foreground uppercase">배경 단색 설정</span>
                     <div className="flex items-center gap-3 bg-[#13171f] border border-card-border p-2 rounded-xl">
-                      <input 
-                        type="color" 
-                        value={myCard.bgColor || "#000000"} 
+                      <input
+                        type="color"
+                        value={myCard.bgColor || "#000000"}
                         onChange={(e) => handleStyleChange("bgColor", e.target.value)}
                         className="w-10 h-10 rounded-lg cursor-pointer border-none bg-transparent"
                       />
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={myCard.bgColor || "#000000"}
                         onChange={(e) => handleStyleChange("bgColor", e.target.value)}
                         className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-white placeholder-muted-foreground"
@@ -898,9 +886,9 @@ export default function AppDashboard() {
                       <div className="flex flex-col gap-1.5">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase">시작 색상</span>
                         <div className="flex items-center gap-2">
-                          <input 
-                            type="color" 
-                            value={myCard.gradientStart} 
+                          <input
+                            type="color"
+                            value={myCard.gradientStart}
                             onChange={(e) => handleStyleChange("gradientStart", e.target.value)}
                             className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent"
                           />
@@ -911,9 +899,9 @@ export default function AppDashboard() {
                       <div className="flex flex-col gap-1.5">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase">끝 색상</span>
                         <div className="flex items-center gap-2">
-                          <input 
-                            type="color" 
-                            value={myCard.gradientEnd} 
+                          <input
+                            type="color"
+                            value={myCard.gradientEnd}
                             onChange={(e) => handleStyleChange("gradientEnd", e.target.value)}
                             className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent"
                           />
@@ -927,17 +915,15 @@ export default function AppDashboard() {
                       <div className="flex bg-[#13171f] border border-card-border p-1 rounded-xl">
                         <button
                           onClick={() => handleStyleChange("gradientType", "linear")}
-                          className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${
-                            (!myCard.gradientType || myCard.gradientType === "linear") ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
-                          }`}
+                          className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${(!myCard.gradientType || myCard.gradientType === "linear") ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
+                            }`}
                         >
                           직선형 (Linear)
                         </button>
                         <button
                           onClick={() => handleStyleChange("gradientType", "radial")}
-                          className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${
-                            myCard.gradientType === "radial" ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
-                          }`}
+                          className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${myCard.gradientType === "radial" ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
+                            }`}
                         >
                           원형 (Radial)
                         </button>
@@ -949,9 +935,9 @@ export default function AppDashboard() {
                             <span className="text-[10px] text-muted-foreground uppercase font-bold">진행 각도 (Angle)</span>
                             <span className="text-[11px] font-mono">{myCard.gradientAngle ?? 135}°</span>
                           </div>
-                          <input 
-                            type="range" 
-                            min="0" max="360" 
+                          <input
+                            type="range"
+                            min="0" max="360"
                             value={myCard.gradientAngle ?? 135}
                             onChange={(e) => handleStyleChange("gradientAngle", parseInt(e.target.value))}
                             className="w-full accent-serenity cursor-pointer"
@@ -968,8 +954,8 @@ export default function AppDashboard() {
                     <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                       <ImageIcon className="w-3.5 h-3.5 text-serenity" /> 배경 이미지 주소 (PNG / JPG)
                     </span>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="bgImageUrl"
                       value={myCard.bgImageUrl || ""}
                       onChange={handleInputChange}
@@ -985,7 +971,7 @@ export default function AppDashboard() {
                     <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                       <Code className="w-3.5 h-3.5 text-rose-quartz" /> SVG 코드 붙여넣기 (XML)
                     </span>
-                    <textarea 
+                    <textarea
                       name="bgSvgContent"
                       value={myCard.bgSvgContent || ""}
                       onChange={handleInputChange}
@@ -1011,8 +997,8 @@ export default function AppDashboard() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                       <User className="w-3 h-3 text-serenity" /> 이름
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="name"
                       value={myCard.name}
                       onChange={handleInputChange}
@@ -1026,8 +1012,8 @@ export default function AppDashboard() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                       <User className="w-3 h-3 text-rose-quartz" /> 영문 이름
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="engName"
                       value={myCard.engName || ""}
                       onChange={handleInputChange}
@@ -1041,8 +1027,8 @@ export default function AppDashboard() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                       <Phone className="w-3 h-3 text-serenity" /> 휴대전화 번호
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="phone"
                       value={myCard.phone || ""}
                       onChange={handleInputChange}
@@ -1056,8 +1042,8 @@ export default function AppDashboard() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                       <Building className="w-3 h-3 text-rose-quartz" /> 회사 번호
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="companyPhone"
                       value={myCard.companyPhone || ""}
                       onChange={handleInputChange}
@@ -1071,8 +1057,8 @@ export default function AppDashboard() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                       <Mail className="w-3 h-3 text-serenity" /> 이메일
                     </label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       name="email"
                       value={myCard.email || ""}
                       onChange={handleInputChange}
@@ -1086,8 +1072,8 @@ export default function AppDashboard() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                       <Building className="w-3 h-3 text-rose-quartz" /> 회사명 / 직책
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="company"
                       value={myCard.company || ""}
                       onChange={handleInputChange}
@@ -1101,8 +1087,8 @@ export default function AppDashboard() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-serenity" /> 프로필 이미지 URL
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       name="avatarUrl"
                       value={myCard.avatarUrl || ""}
                       onChange={handleInputChange}
@@ -1116,7 +1102,7 @@ export default function AppDashboard() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                       <FileText className="w-3 h-3 text-rose-quartz" /> 자기 소개 (소개 란에 상세 노출)
                     </label>
-                    <textarea 
+                    <textarea
                       name="bio"
                       value={myCard.bio || ""}
                       onChange={handleInputChange}
@@ -1153,12 +1139,12 @@ export default function AppDashboard() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {walletCards.map((walletCard) => (
-                  <div 
+                  <div
                     key={walletCard.id}
                     className="group relative p-4 rounded-xl bg-white/2 border border-card-border flex flex-col justify-between aspect-[1.586/1] overflow-hidden hover:scale-[1.01] transition-all"
                   >
                     {/* Gradient bar indicator */}
-                    <div 
+                    <div
                       className="absolute top-0 right-0 w-2 h-full"
                       style={{
                         background: `linear-gradient(to bottom, ${walletCard.gradientStart}, ${walletCard.gradientEnd})`
@@ -1176,14 +1162,14 @@ export default function AppDashboard() {
                           </span>
                         )}
                       </div>
-                      
+
                       {/* Avatar */}
                       <div className="w-8 h-8 rounded-full border border-card-border overflow-hidden bg-neutral-900 flex-shrink-0">
                         {walletCard.avatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img 
-                            src={walletCard.avatarUrl} 
-                            alt={walletCard.name} 
+                          <img
+                            src={walletCard.avatarUrl}
+                            alt={walletCard.name}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -1198,16 +1184,16 @@ export default function AppDashboard() {
                       <span className="text-[9px] text-muted-foreground font-mono">
                         {walletCard.phone}
                       </span>
-                      
+
                       <div className="flex gap-1">
-                        <Link 
+                        <Link
                           href={`/share/?id=${walletCard.id}`}
                           className="p-1.5 rounded-lg bg-white/5 border border-card-border text-muted-foreground hover:text-foreground cursor-pointer transition"
                           title="명함 보기"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
-                        <button 
+                        <button
                           onClick={() => handleDeleteFromWallet(walletCard.id)}
                           className="p-1.5 rounded-lg bg-white/5 border border-card-border text-rose-quartz/60 hover:text-rose-quartz cursor-pointer transition"
                           title="지우기"
