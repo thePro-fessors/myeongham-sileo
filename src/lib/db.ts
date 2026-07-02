@@ -1,0 +1,192 @@
+import { db, isFirebaseEnabled } from "./firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+
+export interface CardShape {
+  id: string;
+  type: "rect" | "circle" | "text";
+  x: number;      // 카드 가로 너비 대비 백분율(%)
+  y: number;      // 카드 세로 높이 대비 백분율(%)
+  width: number;  // 가로 백분율(%)
+  height: number; // 세로 백분율(%)
+  color: string;  // 도형 색상 또는 텍스트 색상
+  text?: string;  // type이 'text'일 때만 존재
+  fontSize?: number; // 텍스트 크기 비율 (10 ~ 40)
+  fontWeight?: string; // bold, normal
+}
+
+export interface BusinessCard {
+  id: string;
+  name: string;
+  engName?: string;
+  phone?: string;
+  companyPhone?: string;
+  email?: string;
+  company?: string;
+  bio?: string;
+  
+  // Customization styling tokens
+  gradientStart: string;
+  gradientEnd: string;
+  borderWidth: number; // 0, 1, 2, etc.
+  borderColor: string;
+  textColor: string;
+  fontFamily: string;
+  avatarUrl?: string; // base64 or external url
+  
+  // Custom visual shapes
+  shapes: CardShape[];
+  
+  createdAt: number;
+}
+
+// Default dummy template with some nice pre-built layout shapes
+export const DEFAULT_CARD: BusinessCard = {
+  id: "gildong-hong",
+  name: "홍길동",
+  engName: "Gildong Hong",
+  phone: "010-0500-5050",
+  companyPhone: "052-290-0303",
+  email: "gildonghong@gmail.com",
+  company: "활빈당 캡틴",
+  bio: "정의를 수호하고 가난한 자들을 돕는 조선의 영웅, 홍길동입니다. 현대 IT 기술과 접목하여 더 스마트하게 세상을 돕고자 합니다.",
+  gradientStart: "#92a8d1", // Serenity
+  gradientEnd: "#f7caca",   // Rose Quartz
+  borderWidth: 1,
+  borderColor: "rgba(255, 255, 255, 0.15)",
+  textColor: "#ffffff",
+  fontFamily: "var(--font-outfit)",
+  shapes: [
+    // Pre-created visual elements simulating a figma layout
+    {
+      id: "sh-1",
+      type: "text",
+      x: 10,
+      y: 65,
+      width: 60,
+      height: 12,
+      color: "#ffffff",
+      text: "홍길동",
+      fontSize: 24,
+      fontWeight: "bold"
+    },
+    {
+      id: "sh-2",
+      type: "text",
+      x: 10,
+      y: 80,
+      width: 60,
+      height: 8,
+      color: "rgba(255, 255, 255, 0.7)",
+      text: "활빈당 캡틴",
+      fontSize: 12,
+      fontWeight: "normal"
+    },
+    {
+      id: "sh-3",
+      type: "circle",
+      x: 82,
+      y: 12,
+      width: 10,
+      height: 10,
+      color: "#f7caca" // Light rose decoration circle
+    },
+    {
+      id: "sh-4",
+      type: "rect",
+      x: 10,
+      y: 15,
+      width: 15,
+      height: 2,
+      color: "#92a8d1" // serenity decorative line
+    }
+  ],
+  createdAt: Date.now(),
+};
+
+/**
+ * Saves a business card to either Firestore or LocalStorage.
+ * Returns the card ID.
+ */
+export async function saveCard(card: BusinessCard): Promise<string> {
+  if (isFirebaseEnabled && db) {
+    try {
+      const cardRef = doc(db, "cards", card.id);
+      await setDoc(cardRef, card);
+      return card.id;
+    } catch (error) {
+      console.error("Failed to save card to Firestore, falling back to LocalStorage:", error);
+    }
+  }
+
+  // Fallback to LocalStorage
+  if (typeof window !== "undefined") {
+    localStorage.setItem(`card-${card.id}`, JSON.stringify(card));
+  }
+  return card.id;
+}
+
+/**
+ * Gets a business card by ID from either Firestore or LocalStorage.
+ */
+export async function getCard(id: string): Promise<BusinessCard | null> {
+  // If Firestore is enabled
+  if (isFirebaseEnabled && db) {
+    try {
+      const cardRef = doc(db, "cards", id);
+      const cardSnap = await getDoc(cardRef);
+      if (cardSnap.exists()) {
+        return cardSnap.data() as BusinessCard;
+      }
+    } catch (error) {
+      console.error("Failed to fetch card from Firestore, checking LocalStorage:", error);
+    }
+  }
+
+  // Fallback to LocalStorage or dummy fallback if id matches dummy
+  if (typeof window !== "undefined") {
+    const localData = localStorage.getItem(`card-${id}`);
+    if (localData) {
+      try {
+        return JSON.parse(localData) as BusinessCard;
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  // Return default card if it matches the default card ID
+  if (id === DEFAULT_CARD.id) {
+    return DEFAULT_CARD;
+  }
+
+  return null;
+}
+
+/**
+ * Local wallet functions (storing other people's card IDs locally)
+ */
+export function getSavedCards(): BusinessCard[] {
+  if (typeof window === "undefined") return [];
+  const listJson = localStorage.getItem("saved-cards");
+  if (!listJson) return [];
+  try {
+    return JSON.parse(listJson) as BusinessCard[];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCardToWallet(card: BusinessCard): void {
+  if (typeof window === "undefined") return;
+  const saved = getSavedCards();
+  if (saved.some((c) => c.id === card.id)) return; // Avoid duplicates
+  saved.push(card);
+  localStorage.setItem("saved-cards", JSON.stringify(saved));
+}
+
+export function removeCardFromWallet(cardId: string): void {
+  if (typeof window === "undefined") return;
+  const saved = getSavedCards();
+  const filtered = saved.filter((c) => c.id !== cardId);
+  localStorage.setItem("saved-cards", JSON.stringify(filtered));
+}

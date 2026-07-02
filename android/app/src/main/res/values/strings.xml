@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Myeongham</string>
+    <string name="title_activity_main">Myeongham</string>
+    <string name="package_name">com.online.businesscard</string>
+    <string name="custom_url_scheme">com.online.businesscard</string>
+    <string name="hce_service_desc">Myeongham HCE Sharing Service</string>
+    <string name="hce_aid_desc">Myeongham AID Filter for NDEF Emulation</string>
+</resources>
