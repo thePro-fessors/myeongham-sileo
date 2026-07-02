@@ -32,7 +32,11 @@ import {
   Circle as CircleIcon,
   Layers,
   ArrowRight,
-  Bold
+  Bold,
+  Image as ImageIcon,
+  Code,
+  ToggleLeft,
+  ToggleRight
 } from "lucide-react";
 import Link from "next/link";
 import { Preferences } from "@capacitor/preferences";
@@ -50,7 +54,9 @@ export default function AppDashboard() {
   const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<{ mouseX: number; mouseY: number; shapeX: number; shapeY: number } | null>(null);
+  const resizeStartRef = useRef<{ mouseX: number; mouseY: number; shapeW: number; shapeH: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
 
   // Load my saved card and wallet from localStorage on mount
   useEffect(() => {
@@ -59,8 +65,12 @@ export default function AppDashboard() {
       if (savedMyCard) {
         try {
           const parsed = JSON.parse(savedMyCard) as BusinessCard;
-          // Ensure shapes field exists
+          // Ensure new fields exist
           if (!parsed.shapes) parsed.shapes = DEFAULT_CARD.shapes;
+          if (!parsed.bgType) parsed.bgType = "gradient";
+          if (parsed.bgSvgContent === undefined) parsed.bgSvgContent = "";
+          if (parsed.bgImageUrl === undefined) parsed.bgImageUrl = "";
+          if (parsed.useDefaultTemplate === undefined) parsed.useDefaultTemplate = true;
           setMyCard(parsed);
         } catch (e) {
           console.error(e);
@@ -79,7 +89,7 @@ export default function AppDashboard() {
     });
   };
 
-  const handleStyleChange = (name: string, value: string | number) => {
+  const handleStyleChange = (name: string, value: string | number | boolean) => {
     setMyCard((prev) => {
       const updated = { ...prev, [name]: value };
       localStorage.setItem("my-business-card", JSON.stringify(updated));
@@ -103,8 +113,8 @@ export default function AppDashboard() {
       type,
       x: 35,
       y: 35,
-      width: type === "text" ? 40 : 15,
-      height: type === "text" ? 8 : 15,
+      width: type === "text" ? 35 : 12,
+      height: type === "text" ? 6 : 12,
       color: type === "text" ? "#ffffff" : (type === "rect" ? "#92a8d1" : "#f7caca"),
       text: type === "text" ? "텍스트 문구" : undefined,
       fontSize: type === "text" ? 14 : undefined,
@@ -124,10 +134,14 @@ export default function AppDashboard() {
   };
 
   // Modify Active Shape properties
-  const handleShapePropChange = (prop: keyof CardShape, value: string | number | boolean) => {
+  const handleShapePropChange = (prop: keyof CardShape, value: string | number | boolean | null) => {
     if (!selectedShapeId) return;
     const updated = myCard.shapes.map((shape) => {
       if (shape.id === selectedShapeId) {
+        if (value === null) {
+          const { [prop]: _, ...rest } = shape;
+          return rest as CardShape;
+        }
         return { ...shape, [prop]: value };
       }
       return shape;
@@ -135,7 +149,7 @@ export default function AppDashboard() {
     updateShapes(updated);
   };
 
-  // Interactive Drag handler
+  // Interactive Drag handler (Move element)
   const handlePointerDown = (e: React.PointerEvent, shapeId: string) => {
     e.stopPropagation();
     setSelectedShapeId(shapeId);
@@ -150,7 +164,6 @@ export default function AppDashboard() {
       shapeY: shape.y
     };
     setIsDragging(true);
-    // Lock pointer to capture move events correctly outside targets
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
 
@@ -161,21 +174,67 @@ export default function AppDashboard() {
     const canvasRect = canvasRef.current.getBoundingClientRect();
     const dragStart = dragStartRef.current;
     
-    // Calculate pixel offsets
     const deltaX = e.clientX - dragStart.mouseX;
     const deltaY = e.clientY - dragStart.mouseY;
 
-    // Convert pixel offsets into percentage coordinates relative to canvas size
     const deltaPctX = (deltaX / canvasRect.width) * 100;
     const deltaPctY = (deltaY / canvasRect.height) * 100;
 
-    // Snap to Grid (1% bounds, rounded)
-    const nextX = Math.max(0, Math.min(100 - 2, Math.round(dragStart.shapeX + deltaPctX)));
-    const nextY = Math.max(0, Math.min(100 - 2, Math.round(dragStart.shapeY + deltaPctY)));
+    const shape = myCard.shapes.find((s) => s.id === shapeId);
+    if (!shape) return;
+
+    const nextX = Math.max(0, Math.min(100 - shape.width, Math.round(dragStart.shapeX + deltaPctX)));
+    const nextY = Math.max(0, Math.min(100 - shape.height, Math.round(dragStart.shapeY + deltaPctY)));
 
     const updated = myCard.shapes.map((s) => {
       if (s.id === shapeId) {
         return { ...s, x: nextX, y: nextY };
+      }
+      return s;
+    });
+    updateShapes(updated);
+  };
+
+  // Resizing Handler (Resize element via bottom-right handle)
+  const handleResizePointerDown = (e: React.PointerEvent, shapeId: string) => {
+    e.stopPropagation();
+    setSelectedShapeId(shapeId);
+
+    const shape = myCard.shapes.find((s) => s.id === shapeId);
+    if (!shape) return;
+
+    resizeStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      shapeW: shape.width,
+      shapeH: shape.height
+    };
+    setIsResizing(true);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handleResizePointerMove = (e: React.PointerEvent, shapeId: string) => {
+    if (!isResizing || !resizeStartRef.current || !canvasRef.current) return;
+    e.stopPropagation();
+
+    const canvasRect = canvasRef.current.getBoundingClientRect();
+    const resizeStart = resizeStartRef.current;
+
+    const deltaX = e.clientX - resizeStart.mouseX;
+    const deltaY = e.clientY - resizeStart.mouseY;
+
+    const deltaPctX = (deltaX / canvasRect.width) * 100;
+    const deltaPctY = (deltaY / canvasRect.height) * 100;
+
+    const shape = myCard.shapes.find((s) => s.id === shapeId);
+    if (!shape) return;
+
+    const nextW = Math.max(5, Math.min(100 - shape.x, Math.round(resizeStart.shapeW + deltaPctX)));
+    const nextH = Math.max(3, Math.min(100 - shape.y, Math.round(resizeStart.shapeH + deltaPctY)));
+
+    const updated = myCard.shapes.map((s) => {
+      if (s.id === shapeId) {
+        return { ...s, width: nextW, height: nextH };
       }
       return s;
     });
@@ -192,6 +251,15 @@ export default function AppDashboard() {
         // ignore
       }
     }
+    if (isResizing) {
+      setIsResizing(false);
+      resizeStartRef.current = null;
+      try {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch (err) {
+        // ignore
+      }
+    }
   };
 
   const handlePublish = async () => {
@@ -202,12 +270,10 @@ export default function AppDashboard() {
       createdAt: Date.now()
     };
     
-    // Save locally under the new ID and cloud DB
     await saveCard(updatedCard);
     setMyCard(updatedCard);
     localStorage.setItem("my-business-card", JSON.stringify(updatedCard));
     
-    // Sync with Capacitor Preferences for Android HCE Service
     try {
       await Preferences.set({
         key: "my_card_id",
@@ -237,9 +303,36 @@ export default function AppDashboard() {
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/share/?id=${myCard.id}` : "";
   const activeShape = myCard.shapes.find((s) => s.id === selectedShapeId);
 
+  // Helper to generate the CSS gradient string based on user settings
+  const getGradientString = (card: BusinessCard) => {
+    if (card.gradientType === "radial") {
+      return `radial-gradient(circle, ${card.gradientStart} 0%, ${card.gradientEnd} 100%)`;
+    }
+    const angle = card.gradientAngle ?? 135;
+    return `linear-gradient(${angle}deg, ${card.gradientStart} 0%, ${card.gradientEnd} 100%)`;
+  };
+
+  // Dynamic Background Style Builder for Card Preview
+  const getCardBackgroundStyle = (): React.CSSProperties => {
+    if (myCard.bgType === "image" && myCard.bgImageUrl) {
+      return {
+        backgroundImage: `url(${myCard.bgImageUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      };
+    }
+    if (myCard.bgType === "gradient") {
+      return {
+        background: getGradientString(myCard),
+      };
+    }
+    return {
+      backgroundColor: "#13171f",
+    };
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-[#0d0f12] text-foreground font-sans pb-16">
-      {/* Ambient background glow */}
       <div className="absolute top-0 right-1/4 w-[300px] h-[300px] bg-[#92a8d1]/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute top-1/3 left-1/4 w-[250px] h-[250px] bg-[#f7caca]/5 rounded-full blur-[100px] pointer-events-none" />
 
@@ -283,13 +376,13 @@ export default function AppDashboard() {
         {activeTab === "edit" ? (
           <>
             {/* LEFT SIDE: Figma Style Live Interactive Canvas */}
-            <div className="w-full lg:w-[48%] flex flex-col gap-6 lg:sticky lg:top-6">
+            <div className="w-full lg:w-[46%] flex flex-col gap-6 lg:sticky lg:top-6">
               <div className="flex justify-between items-end">
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] font-bold text-serenity uppercase tracking-widest">LIVE INTERACTIVE CANVAS</span>
                   <h2 className="text-lg font-bold">명함 디자인 캔버스</h2>
                 </div>
-                <span className="text-xs text-muted-foreground font-light">도형을 잡아 드래그하세요</span>
+                <span className="text-xs text-muted-foreground font-light">도형 크기 조절은 모서리를 당기세요</span>
               </div>
 
               {/* Interactive Design Board Wrapper */}
@@ -297,15 +390,89 @@ export default function AppDashboard() {
                 ref={canvasRef}
                 className="w-full aspect-[1.586/1] rounded-2xl p-[1.5px] shadow-2xl relative select-none overflow-hidden"
                 style={{
-                  background: `linear-gradient(135deg, ${myCard.gradientStart} 0%, ${myCard.gradientEnd} 100%)`
+                  background: myCard.bgType === "gradient" 
+                    ? getGradientString(myCard)
+                    : "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)"
                 }}
-                onClick={() => setSelectedShapeId(null)} // Click canvas blank space to deselect
+                onPointerDown={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setSelectedShapeId(null);
+                  }
+                }} // Click canvas blank space to deselect
               >
                 {/* Visual Glass Inner Card Workspace */}
-                <div className="w-full h-full bg-[#13171f]/95 rounded-[15px] relative overflow-hidden">
-                  
-                  {/* Render custom user shapes dynamically using relative percent layout */}
-                  {myCard.shapes.map((shape) => {
+                <div 
+                  className="w-full h-full bg-[#13171f]/95 rounded-[15px] relative overflow-hidden transition-all duration-300"
+                  style={getCardBackgroundStyle()}
+                >
+                  {/* Dynamic SVG background support */}
+                  {myCard.bgType === "svg" && myCard.bgSvgContent && (
+                    <div 
+                      className="absolute inset-0 z-0 pointer-events-none opacity-80"
+                      dangerouslySetInnerHTML={{ __html: myCard.bgSvgContent }}
+                    />
+                  )}
+
+                  {/* 1. 원래 스크린샷 템플릿 디자인 오버레이 (useDefaultTemplate이 true일 때만) */}
+                  {myCard.useDefaultTemplate && (
+                    <div className="absolute inset-0 w-full h-full z-0 p-5 flex flex-col justify-between pointer-events-none border border-white/10 rounded-[15px]">
+                      
+                      {/* Top Row: Info badge & Avatar */}
+                      <div className="flex justify-between items-start w-full">
+                        <div className="flex flex-col gap-1.5 items-start">
+                          <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">PREVIEW CARD</span>
+                          {myCard.company && (
+                            <span className="text-[10px] font-medium text-serenity bg-[#0d0f12]/60 px-3 py-1 rounded-full border border-serenity/20 backdrop-blur-md">
+                              {myCard.company}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* 둥근 프로필 아바타 프레임 */}
+                        <div 
+                          className="w-14 h-14 rounded-full p-[1.5px]"
+                          style={{
+                            background: getGradientString(myCard)
+                          }}
+                        >
+                          {myCard.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img 
+                              src={myCard.avatarUrl} 
+                              alt="Profile" 
+                              className="w-full h-full rounded-full object-cover bg-neutral-800"
+                            />
+                          ) : (
+                            <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                              IMG
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bottom Row: Name Block */}
+                      <div className="flex flex-col gap-0.5 items-start mt-auto">
+                        <div className="flex items-baseline gap-1.5">
+                          <h1 className="text-xl font-bold tracking-tight text-white">
+                            {myCard.name || "이름"}
+                          </h1>
+                          {myCard.engName && (
+                            <span className="text-xs font-light text-muted-foreground italic">
+                              {myCard.engName}
+                            </span>
+                          )}
+                        </div>
+                        {myCard.phone && (
+                          <span className="text-[11px] text-muted-foreground/80 font-mono tracking-wide">
+                            {myCard.phone}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. Render custom user shapes dynamically using relative percent layout */}
+                  {!myCard.useDefaultTemplate && myCard.shapes.map((shape) => {
                     const isSelected = shape.id === selectedShapeId;
                     
                     // Box styling positioning
@@ -315,10 +482,20 @@ export default function AppDashboard() {
                       top: `${shape.y}%`,
                       width: `${shape.width}%`,
                       height: `${shape.height}%`,
-                      cursor: isDragging ? "grabbing" : "grab",
+                      cursor: isDragging ? "grabbing" : (isResizing ? "se-resize" : "grab"),
                       zIndex: isSelected ? 30 : 10,
                       touchAction: "none"
                     };
+
+                    const handleEl = isSelected && (
+                      <div 
+                        onPointerDown={(e) => handleResizePointerDown(e, shape.id)}
+                        onPointerMove={(e) => handleResizePointerMove(e, shape.id)}
+                        onPointerUp={handlePointerUp}
+                        className="absolute right-0 bottom-0 w-2.5 h-2.5 bg-serenity border border-white rounded-full z-40 translate-x-1/2 translate-y-1/2 cursor-se-resize shadow-md"
+                        style={{ touchAction: "none" }}
+                      />
+                    );
 
                     if (shape.type === "rect") {
                       return (
@@ -327,14 +504,16 @@ export default function AppDashboard() {
                           onPointerDown={(e) => handlePointerDown(e, shape.id)}
                           onPointerMove={(e) => handlePointerMove(e, shape.id)}
                           onPointerUp={handlePointerUp}
-                          className={`rounded-sm transition-shadow duration-200 ${
+                          className={`rounded-sm transition-shadow duration-200 relative ${
                             isSelected ? "ring-2 ring-serenity ring-offset-2 ring-offset-[#13171f]" : ""
                           }`}
                           style={{
                             ...shapeStyle,
                             backgroundColor: shape.color,
                           }}
-                        />
+                        >
+                          {handleEl}
+                        </div>
                       );
                     }
 
@@ -345,25 +524,31 @@ export default function AppDashboard() {
                           onPointerDown={(e) => handlePointerDown(e, shape.id)}
                           onPointerMove={(e) => handlePointerMove(e, shape.id)}
                           onPointerUp={handlePointerUp}
-                          className={`rounded-full transition-shadow duration-200 ${
+                          className={`rounded-full transition-shadow duration-200 relative ${
                             isSelected ? "ring-2 ring-serenity ring-offset-2 ring-offset-[#13171f]" : ""
                           }`}
                           style={{
                             ...shapeStyle,
                             backgroundColor: shape.color,
                           }}
-                        />
+                        >
+                          {handleEl}
+                        </div>
                       );
                     }
 
                     if (shape.type === "text") {
+                      const textToShow = shape.bindField 
+                        ? (myCard[shape.bindField] || `${shape.bindField} 필드 미기입`) 
+                        : (shape.text || "텍스트");
+
                       return (
                         <div
                           key={shape.id}
                           onPointerDown={(e) => handlePointerDown(e, shape.id)}
                           onPointerMove={(e) => handlePointerMove(e, shape.id)}
                           onPointerUp={handlePointerUp}
-                          className={`flex items-center overflow-hidden transition-shadow duration-200 select-none ${
+                          className={`flex items-center overflow-hidden transition-shadow duration-200 select-none relative ${
                             isSelected ? "ring-2 ring-serenity ring-offset-2 ring-offset-[#13171f] px-1" : ""
                           } ${shape.fontWeight === "bold" ? "font-bold" : "font-normal"}`}
                           style={{
@@ -373,7 +558,8 @@ export default function AppDashboard() {
                             lineHeight: 1.1
                           }}
                         >
-                          {shape.text || "텍스트"}
+                          {textToShow}
+                          {handleEl}
                         </div>
                       );
                     }
@@ -484,7 +670,7 @@ export default function AppDashboard() {
               
               {/* PANEL 1: Active Layer Element Customizer (Shows only if a shape is focused) */}
               {activeShape ? (
-                <div className="bg-card-bg border border-card-border rounded-2xl p-5 backdrop-blur-md flex flex-col gap-4 border-l-2 border-l-serenity">
+                <div className="bg-card-bg border border-card-border rounded-2xl p-5 backdrop-blur-md flex flex-col gap-4 border-l-2 border-l-serenity animate-fade-in">
                   <div className="flex items-center justify-between border-b border-card-border/50 pb-2">
                     <div className="flex items-center gap-2">
                       <Layers className="w-4 h-4 text-serenity" />
@@ -495,16 +681,39 @@ export default function AppDashboard() {
                     </span>
                   </div>
 
-                  {/* Text Content Modifier */}
+                  {/* Text Content / Data Binding Selection */}
                   {activeShape.type === "text" && (
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase">텍스트 글자</span>
-                      <input 
-                        type="text"
-                        value={activeShape.text || ""}
-                        onChange={(e) => handleShapePropChange("text", e.target.value)}
-                        className="px-3 py-1.5 rounded-lg bg-white/2 border border-card-border text-xs focus:border-serenity focus:outline-none"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Data Binding Selector */}
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">인적사항 데이터 연동</span>
+                        <select
+                          value={activeShape.bindField || ""}
+                          onChange={(e) => handleShapePropChange("bindField", e.target.value || null)}
+                          className="px-3 py-1.5 rounded-lg bg-[#13171f] border border-card-border text-xs focus:border-serenity focus:outline-none"
+                        >
+                          <option value="">직접 텍스트 입력 (연동 없음)</option>
+                          <option value="name">이름 (Name)</option>
+                          <option value="engName">영문 이름 (Eng Name)</option>
+                          <option value="phone">휴대전화 (Phone)</option>
+                          <option value="companyPhone">회사 번호 (Company Phone)</option>
+                          <option value="email">이메일 (Email)</option>
+                          <option value="company">회사명 / 직함 (Company/Title)</option>
+                        </select>
+                      </div>
+
+                      {/* Manual Text Input (only shows if no binding selected) */}
+                      {!activeShape.bindField && (
+                        <div className="flex flex-col gap-1.5">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase">텍스트 직접 입력</span>
+                          <input 
+                            type="text"
+                            value={activeShape.text || ""}
+                            onChange={(e) => handleShapePropChange("text", e.target.value)}
+                            className="px-3 py-1.5 rounded-lg bg-white/2 border border-card-border text-xs focus:border-serenity focus:outline-none"
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -581,7 +790,170 @@ export default function AppDashboard() {
                 </div>
               ) : null}
 
-              {/* PANEL 2: Business Card Info & Card Background Styling */}
+              {/* PANEL 2: Template Toggles & Custom Background */}
+              <div className="bg-card-bg border border-card-border rounded-2xl p-5 backdrop-blur-md flex flex-col gap-4">
+                <div className="flex items-center justify-between border-b border-card-border/50 pb-3">
+                  <div className="flex items-center gap-1.5">
+                    <Palette className="w-4.5 h-4.5 text-serenity" />
+                    <h3 className="text-xs font-bold">템플릿 설정 및 명함 테마</h3>
+                  </div>
+                  
+                  {/* DEFAULT TEMPLATE ON/OFF TOGGLE SWITCH */}
+                  <div className="flex bg-[#13171f] border border-card-border p-1 rounded-xl">
+                    <button
+                      onClick={() => handleStyleChange("useDefaultTemplate", true)}
+                      className={`flex-1 px-4 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${
+                        myCard.useDefaultTemplate ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
+                      }`}
+                    >
+                      Normal
+                    </button>
+                    <button
+                      onClick={() => handleStyleChange("useDefaultTemplate", false)}
+                      className={`flex-1 px-4 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${
+                        !myCard.useDefaultTemplate ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
+                      }`}
+                    >
+                      Designate
+                    </button>
+                  </div>
+                </div>
+
+                {/* Background Type Selection */}
+                <div className="flex gap-2 p-1 bg-[#13171f] border border-card-border rounded-xl">
+                  <button
+                    onClick={() => handleStyleChange("bgType", "gradient")}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition ${
+                      myCard.bgType === "gradient" ? "bg-serenity text-slate-900" : "text-muted-foreground"
+                    }`}
+                  >
+                    그라데이션
+                  </button>
+                  <button
+                    onClick={() => handleStyleChange("bgType", "image")}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition ${
+                      myCard.bgType === "image" ? "bg-serenity text-slate-900" : "text-muted-foreground"
+                    }`}
+                  >
+                    PNG/JPG 이미지
+                  </button>
+                  <button
+                    onClick={() => handleStyleChange("bgType", "svg")}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg cursor-pointer transition ${
+                      myCard.bgType === "svg" ? "bg-serenity text-slate-900" : "text-muted-foreground"
+                    }`}
+                  >
+                    SVG 코드
+                  </button>
+                </div>
+
+                {/* 1. Gradient Panel */}
+                {myCard.bgType === "gradient" && (
+                  <div className="flex flex-col gap-4 animate-fade-in">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">시작 색상</span>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="color" 
+                            value={myCard.gradientStart} 
+                            onChange={(e) => handleStyleChange("gradientStart", e.target.value)}
+                            className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent"
+                          />
+                          <span className="text-xs font-mono">{myCard.gradientStart}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">끝 색상</span>
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="color" 
+                            value={myCard.gradientEnd} 
+                            onChange={(e) => handleStyleChange("gradientEnd", e.target.value)}
+                            className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent"
+                          />
+                          <span className="text-xs font-mono">{myCard.gradientEnd}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3 mt-1 border-t border-card-border/50 pt-4">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">그라데이션 타입 및 각도</span>
+                      <div className="flex bg-[#13171f] border border-card-border p-1 rounded-xl">
+                        <button
+                          onClick={() => handleStyleChange("gradientType", "linear")}
+                          className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${
+                            (!myCard.gradientType || myCard.gradientType === "linear") ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
+                          }`}
+                        >
+                          직선형 (Linear)
+                        </button>
+                        <button
+                          onClick={() => handleStyleChange("gradientType", "radial")}
+                          className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg cursor-pointer transition ${
+                            myCard.gradientType === "radial" ? "bg-serenity text-slate-900" : "text-muted-foreground hover:text-white"
+                          }`}
+                        >
+                          원형 (Radial)
+                        </button>
+                      </div>
+
+                      {(!myCard.gradientType || myCard.gradientType === "linear") && (
+                        <div className="flex flex-col gap-2 mt-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold">진행 각도 (Angle)</span>
+                            <span className="text-[11px] font-mono">{myCard.gradientAngle ?? 135}°</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="0" max="360" 
+                            value={myCard.gradientAngle ?? 135}
+                            onChange={(e) => handleStyleChange("gradientAngle", parseInt(e.target.value))}
+                            className="w-full accent-serenity cursor-pointer"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Custom Image URL Panel */}
+                {myCard.bgType === "image" && (
+                  <div className="flex flex-col gap-1.5 animate-fade-in">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                      <ImageIcon className="w-3.5 h-3.5 text-serenity" /> 배경 이미지 주소 (PNG / JPG)
+                    </span>
+                    <input 
+                      type="text" 
+                      name="bgImageUrl"
+                      value={myCard.bgImageUrl || ""}
+                      onChange={handleInputChange}
+                      className="px-3.5 py-2.5 rounded-xl bg-white/2 border border-card-border text-xs focus:border-serenity focus:outline-none transition"
+                      placeholder="https://example.com/background.png 등 이미지 주소"
+                    />
+                  </div>
+                )}
+
+                {/* 3. Custom SVG Markup Panel */}
+                {myCard.bgType === "svg" && (
+                  <div className="flex flex-col gap-1.5 animate-fade-in">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                      <Code className="w-3.5 h-3.5 text-rose-quartz" /> SVG 코드 붙여넣기 (XML)
+                    </span>
+                    <textarea 
+                      name="bgSvgContent"
+                      value={myCard.bgSvgContent || ""}
+                      onChange={handleInputChange}
+                      rows={4}
+                      className="px-3.5 py-2.5 rounded-xl bg-white/2 border border-card-border text-xs font-mono focus:border-rose-quartz focus:outline-none transition resize-none"
+                      placeholder="<svg ...> ... </svg>"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* PANEL 3: Business Card Info */}
               <div className="w-full bg-card-bg border border-card-border rounded-2xl p-6 backdrop-blur-md flex flex-col gap-6">
                 <div className="flex items-center gap-2 border-b border-card-border/50 pb-4">
                   <Settings className="w-5 h-5 text-serenity" />
@@ -710,47 +1082,11 @@ export default function AppDashboard() {
                     />
                   </div>
                 </div>
-
-                {/* Base Styling Color Picker */}
-                <div className="flex flex-col gap-4 border-t border-card-border/50 pt-5 mt-2">
-                  <div className="flex items-center gap-1.5">
-                    <Palette className="w-4 h-4 text-serenity" />
-                    <h3 className="text-xs font-semibold">명함 카드 배경 그라데이션 커스텀</h3>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase">시작 색상</span>
-                      <div className="flex items-center gap-2">
-                        <input 
-                          type="color" 
-                          value={myCard.gradientStart} 
-                          onChange={(e) => handleStyleChange("gradientStart", e.target.value)}
-                          className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent"
-                        />
-                        <span className="text-xs font-mono">{myCard.gradientStart}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase">끝 색상</span>
-                      <div className="flex items-center gap-2">
-                        <input 
-                          type="color" 
-                          value={myCard.gradientEnd} 
-                          onChange={(e) => handleStyleChange("gradientEnd", e.target.value)}
-                          className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent"
-                        />
-                        <span className="text-xs font-mono">{myCard.gradientEnd}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </>
         ) : (
-          /* WALLET VIEW: Saved cards */
+          /* WALLET VIEW */
           <div className="w-full max-w-2xl mx-auto bg-card-bg border border-card-border rounded-2xl p-6 backdrop-blur-md flex flex-col gap-6">
             <div className="flex items-center justify-between border-b border-card-border/50 pb-4">
               <div className="flex items-center gap-2">

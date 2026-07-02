@@ -104,6 +104,14 @@ function CardViewerContent() {
     );
   }
 
+  const getGradientString = (c: BusinessCard) => {
+    if (c.gradientType === "radial") {
+      return `radial-gradient(circle, ${c.gradientStart} 0%, ${c.gradientEnd} 100%)`;
+    }
+    const angle = c.gradientAngle ?? 135;
+    return `linear-gradient(${angle}deg, ${c.gradientStart} 0%, ${c.gradientEnd} 100%)`;
+  };
+
   return (
     <div className="relative flex flex-col items-center justify-start min-h-screen w-full bg-[#0d0f12] text-foreground font-sans selection:bg-serenity/30 overflow-y-auto pb-24">
       {/* Top Header Floating Utility */}
@@ -136,7 +144,7 @@ function CardViewerContent() {
         <div 
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] sm:w-[350px] h-[250px] sm:h-[350px] rounded-full blur-[100px] opacity-15 pointer-events-none"
           style={{
-            background: `radial-gradient(circle, ${card.gradientStart} 0%, ${card.gradientEnd} 100%)`
+            background: getGradientString(card)
           }}
         />
 
@@ -144,13 +152,92 @@ function CardViewerContent() {
         <div 
           className="relative w-full max-w-[340px] sm:max-w-[380px] aspect-[1.586/1] rounded-2xl p-[1.5px] shadow-2xl transition duration-500 hover:scale-[1.02]"
           style={{
-            background: `linear-gradient(135deg, ${card.gradientStart} 0%, ${card.gradientEnd} 100%)`
+            background: getGradientString(card)
           }}
         >
           {/* Card Content Wrapper */}
-          <div className="w-full h-full bg-[#13171f]/95 rounded-[15px] relative overflow-hidden">
+          <div 
+            className="w-full h-full bg-[#13171f]/95 rounded-[15px] relative overflow-hidden transition-all duration-300"
+            style={{
+              ...(card.bgType === "image" && card.bgImageUrl ? {
+                backgroundImage: `url(${card.bgImageUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center"
+              } : card.bgType === "gradient" ? {
+                background: getGradientString(card)
+              } : {
+                backgroundColor: "#13171f"
+              })
+            }}
+          >
+            {/* Dynamic SVG background support */}
+            {card.bgType === "svg" && card.bgSvgContent && (
+              <div 
+                className="absolute inset-0 z-0 pointer-events-none opacity-80"
+                dangerouslySetInnerHTML={{ __html: card.bgSvgContent }}
+              />
+            )}
+
+            {/* 기본 테두리 및 프로필 레이아웃 템플릿 적용 여부 */}
+            {card.useDefaultTemplate && (
+              <div className="absolute inset-0 w-full h-full z-0 p-5 flex flex-col justify-between pointer-events-none border border-white/10 rounded-[15px]">
+                
+                {/* Top Row: Info badge & Avatar */}
+                <div className="flex justify-between items-start w-full">
+                  <div className="flex flex-col gap-1.5 items-start">
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">PREVIEW CARD</span>
+                    {card.company && (
+                      <span className="text-[10px] font-medium text-serenity bg-[#0d0f12]/60 px-3 py-1 rounded-full border border-serenity/20 backdrop-blur-md">
+                        {card.company}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* 둥근 프로필 아바타 프레임 */}
+                  <div 
+                    className="w-14 h-14 rounded-full p-[1.5px]"
+                    style={{
+                      background: getGradientString(card)
+                    }}
+                  >
+                    {card.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img 
+                        src={card.avatarUrl} 
+                        alt="Profile" 
+                        className="w-full h-full rounded-full object-cover bg-neutral-800"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-neutral-900 flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                        IMG
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Bottom Row: Name Block */}
+                <div className="flex flex-col gap-0.5 items-start mt-auto">
+                  <div className="flex items-baseline gap-1.5">
+                    <h1 className="text-xl font-bold tracking-tight text-white">
+                      {card.name || "이름"}
+                    </h1>
+                    {card.engName && (
+                      <span className="text-xs font-light text-muted-foreground italic">
+                        {card.engName}
+                      </span>
+                    )}
+                  </div>
+                  {card.phone && (
+                    <span className="text-[11px] text-muted-foreground/80 font-mono tracking-wide">
+                      {card.phone}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Render dynamically created shapes (Figma elements) */}
-            {(card.shapes || []).map((shape) => {
+            {!card.useDefaultTemplate && (card.shapes || []).map((shape) => {
               const shapeStyle: React.CSSProperties = {
                 position: "absolute",
                 left: `${shape.x}%`,
@@ -187,6 +274,11 @@ function CardViewerContent() {
               }
 
               if (shape.type === "text") {
+                // 실시간 데이터 바인딩 렌더링
+                const textToShow = shape.bindField 
+                  ? (card[shape.bindField] || "") 
+                  : (shape.text || "");
+
                 return (
                   <div
                     key={shape.id}
@@ -199,7 +291,7 @@ function CardViewerContent() {
                       fontSize: `${(shape.fontSize || 14) * 0.9}px`,
                     }}
                   >
-                    {shape.text}
+                    {textToShow}
                   </div>
                 );
               }
@@ -208,7 +300,7 @@ function CardViewerContent() {
             })}
 
             {/* Fallback layout if no shapes are present */}
-            {(!card.shapes || card.shapes.length === 0) && (
+            {!card.useDefaultTemplate && (!card.shapes || card.shapes.length === 0) && (
               <div className="w-full h-full p-6 flex flex-col justify-between">
                 <div className="flex justify-between items-start">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">MYEONGHAM</span>

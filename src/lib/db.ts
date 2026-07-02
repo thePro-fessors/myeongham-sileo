@@ -9,7 +9,11 @@ export interface CardShape {
   width: number;  // 가로 백분율(%)
   height: number; // 세로 백분율(%)
   color: string;  // 도형 색상 또는 텍스트 색상
-  text?: string;  // type이 'text'일 때만 존재
+  text?: string;  // type이 'text'이고 바인딩이 없을 때 보여줄 텍스트
+
+  // [NEW] 인적사항 폼 필드와 연동될 데이터 바인딩 속성
+  bindField?: "name" | "engName" | "phone" | "companyPhone" | "email" | "company";
+
   fontSize?: number; // 텍스트 크기 비율 (10 ~ 40)
   fontWeight?: string; // bold, normal
 }
@@ -23,23 +27,33 @@ export interface BusinessCard {
   email?: string;
   company?: string;
   bio?: string;
-  
+
   // Customization styling tokens
   gradientStart: string;
   gradientEnd: string;
+  gradientType?: "linear" | "radial";
+  gradientAngle?: number; // 0 to 360 degrees
   borderWidth: number; // 0, 1, 2, etc.
   borderColor: string;
   textColor: string;
   fontFamily: string;
   avatarUrl?: string; // base64 or external url
-  
+
+  // [NEW] 배경 타입 및 커스텀 배경 리소스 데이터
+  bgType: "gradient" | "svg" | "image";
+  bgSvgContent?: string;
+  bgImageUrl?: string;
+
+  // [NEW] 기본 테두리 및 프로필 레이아웃 템플릿 적용 여부
+  useDefaultTemplate: boolean;
+
   // Custom visual shapes
   shapes: CardShape[];
-  
+
   createdAt: number;
 }
 
-// Default dummy template with some nice pre-built layout shapes
+// Default dummy template with data-bound shapes mapping name and title to form inputs
 export const DEFAULT_CARD: BusinessCard = {
   id: "gildong-hong",
   name: "홍길동",
@@ -51,12 +65,18 @@ export const DEFAULT_CARD: BusinessCard = {
   bio: "정의를 수호하고 가난한 자들을 돕는 조선의 영웅, 홍길동입니다. 현대 IT 기술과 접목하여 더 스마트하게 세상을 돕고자 합니다.",
   gradientStart: "#92a8d1", // Serenity
   gradientEnd: "#f7caca",   // Rose Quartz
+  gradientType: "linear",
+  gradientAngle: 135,
   borderWidth: 1,
   borderColor: "rgba(255, 255, 255, 0.15)",
   textColor: "#ffffff",
   fontFamily: "var(--font-outfit)",
+  bgType: "gradient",
+  bgSvgContent: "",
+  bgImageUrl: "",
+  useDefaultTemplate: true,
   shapes: [
-    // Pre-created visual elements simulating a figma layout
+    // Pre-created visual elements simulating a figma layout with data binding
     {
       id: "sh-1",
       type: "text",
@@ -66,6 +86,7 @@ export const DEFAULT_CARD: BusinessCard = {
       height: 12,
       color: "#ffffff",
       text: "홍길동",
+      bindField: "name", // Linked to the name input field
       fontSize: 24,
       fontWeight: "bold"
     },
@@ -78,6 +99,7 @@ export const DEFAULT_CARD: BusinessCard = {
       height: 8,
       color: "rgba(255, 255, 255, 0.7)",
       text: "활빈당 캡틴",
+      bindField: "company", // Linked to the company/position input field
       fontSize: 12,
       fontWeight: "normal"
     },
