@@ -43,9 +43,11 @@ import {
   Upload
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Preferences } from "@capacitor/preferences";
 
 export default function AppDashboard() {
+  const router = useRouter();
   // My Card State
   const [myCard, setMyCard] = useState<BusinessCard>(DEFAULT_CARD);
   const [walletCards, setWalletCards] = useState<BusinessCard[]>([]);
@@ -1506,6 +1508,9 @@ export default function AppDashboard() {
                       className="px-3.5 py-2.5 rounded-xl bg-white/2 border border-card-border text-xs focus:border-serenity focus:outline-none transition"
                       placeholder="https://example.com/background.png 등 이미지 주소"
                     />
+                    <span className="text-[9px] text-muted-foreground leading-normal mt-0.5">
+                      * 추천 해상도: 1080 x 600 (9:5 가로세로 비율) 또는 가로형 이미지 권장.
+                    </span>
                   </div>
                 )}
 
@@ -1537,10 +1542,21 @@ export default function AppDashboard() {
                 {/* Form Input fields */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Name */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      <User className="w-3 h-3 text-serenity" /> 이름
-                    </label>
+                   <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        <User className="w-3 h-3 text-serenity" /> 이름
+                      </label>
+                      <label className="flex items-center gap-1 text-[9px] text-muted-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={myCard.showName !== false}
+                          onChange={(e) => handleStyleChange("showName", e.target.checked)}
+                          className="w-3 h-3 accent-serenity rounded"
+                        />
+                        상세 노출
+                      </label>
+                    </div>
                     <input
                       type="text"
                       name="name"
@@ -1552,10 +1568,21 @@ export default function AppDashboard() {
                   </div>
 
                   {/* English Name */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      <User className="w-3 h-3 text-rose-quartz" /> 영문 이름
-                    </label>
+                   <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        <User className="w-3 h-3 text-rose-quartz" /> 영문 이름
+                      </label>
+                      <label className="flex items-center gap-1 text-[9px] text-muted-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={myCard.showEngName !== false}
+                          onChange={(e) => handleStyleChange("showEngName", e.target.checked)}
+                          className="w-3 h-3 accent-rose-quartz rounded"
+                        />
+                        상세 노출
+                      </label>
+                    </div>
                     <input
                       type="text"
                       name="engName"
@@ -1567,10 +1594,21 @@ export default function AppDashboard() {
                   </div>
 
                   {/* Mobile Phone */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      <Phone className="w-3 h-3 text-serenity" /> 휴대전화 번호
-                    </label>
+                   <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-serenity" /> 휴대전화 번호
+                      </label>
+                      <label className="flex items-center gap-1 text-[9px] text-muted-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={myCard.showPhone !== false}
+                          onChange={(e) => handleStyleChange("showPhone", e.target.checked)}
+                          className="w-3 h-3 accent-serenity rounded"
+                        />
+                        상세 노출
+                      </label>
+                    </div>
                     <input
                       type="text"
                       name="phone"
@@ -1582,10 +1620,21 @@ export default function AppDashboard() {
                   </div>
 
                   {/* Company Phone */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      <Building className="w-3 h-3 text-rose-quartz" /> 회사 번호
-                    </label>
+                   <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        <Building className="w-3 h-3 text-rose-quartz" /> 회사 번호
+                      </label>
+                      <label className="flex items-center gap-1 text-[9px] text-muted-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={myCard.showCompanyPhone !== false}
+                          onChange={(e) => handleStyleChange("showCompanyPhone", e.target.checked)}
+                          className="w-3 h-3 accent-rose-quartz rounded"
+                        />
+                        상세 노출
+                      </label>
+                    </div>
                     <input
                       type="text"
                       name="companyPhone"
@@ -1597,10 +1646,21 @@ export default function AppDashboard() {
                   </div>
 
                   {/* Email */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      <Mail className="w-3 h-3 text-serenity" /> 이메일
-                    </label>
+                   <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        <Mail className="w-3 h-3 text-serenity" /> 이메일
+                      </label>
+                      <label className="flex items-center gap-1 text-[9px] text-muted-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={myCard.showEmail !== false}
+                          onChange={(e) => handleStyleChange("showEmail", e.target.checked)}
+                          className="w-3 h-3 accent-serenity rounded"
+                        />
+                        상세 노출
+                      </label>
+                    </div>
                     <input
                       type="email"
                       name="email"
@@ -1612,10 +1672,21 @@ export default function AppDashboard() {
                   </div>
 
                   {/* Company / Position */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      <Building className="w-3 h-3 text-rose-quartz" /> 회사명 / 직책
-                    </label>
+                   <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        <Building className="w-3 h-3 text-rose-quartz" /> 회사명 / 직책
+                      </label>
+                      <label className="flex items-center gap-1 text-[9px] text-muted-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={myCard.showCompany !== false}
+                          onChange={(e) => handleStyleChange("showCompany", e.target.checked)}
+                          className="w-3 h-3 accent-rose-quartz rounded"
+                        />
+                        상세 노출
+                      </label>
+                    </div>
                     <input
                       type="text"
                       name="company"
@@ -1701,10 +1772,21 @@ export default function AppDashboard() {
                   </div>
 
                   {/* Introduction (Bio) */}
-                  <div className="flex flex-col gap-1.5 sm:col-span-2">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      <FileText className="w-3 h-3 text-rose-quartz" /> 자기 소개 (소개 란에 상세 노출)
-                    </label>
+                   <div className="flex flex-col gap-1.5 sm:col-span-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        <FileText className="w-3 h-3 text-rose-quartz" /> 자기 소개 (소개 란에 상세 노출)
+                      </label>
+                      <label className="flex items-center gap-1 text-[9px] text-muted-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={myCard.showBio !== false}
+                          onChange={(e) => handleStyleChange("showBio", e.target.checked)}
+                          className="w-3 h-3 accent-rose-quartz rounded"
+                        />
+                        상세 노출
+                      </label>
+                    </div>
                     <textarea
                       name="bio"
                       value={myCard.bio || ""}
@@ -1837,7 +1919,8 @@ export default function AppDashboard() {
                 {walletCards.map((walletCard) => (
                   <div
                     key={walletCard.id}
-                    className="group relative p-4 rounded-xl bg-white/2 border border-card-border flex flex-col justify-between aspect-[1.586/1] overflow-hidden hover:scale-[1.01] transition-all"
+                    onClick={() => router.push(`/share/?id=${walletCard.id}`)}
+                    className="group relative p-4.5 rounded-xl bg-white/2 border border-card-border flex flex-col justify-between aspect-[1.586/1] overflow-hidden hover:scale-[1.01] hover:bg-white/5 active:scale-[0.99] transition-all cursor-pointer"
                   >
                     {/* Gradient bar indicator */}
                     <div
@@ -1849,18 +1932,18 @@ export default function AppDashboard() {
 
                     <div className="flex justify-between items-start pr-3">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-foreground truncate max-w-[150px]">
+                        <span className="text-base font-bold text-foreground truncate max-w-[170px]">
                           {walletCard.name}
                         </span>
                         {walletCard.company && (
-                          <span className="text-[9px] text-serenity mt-0.5 font-medium">
+                          <span className="text-xs text-serenity mt-1 font-medium truncate max-w-[170px]">
                             {walletCard.company}
                           </span>
                         )}
                       </div>
 
                       {/* Avatar */}
-                      <div className="w-8 h-8 rounded-full border border-card-border overflow-hidden bg-neutral-900 flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full border border-card-border overflow-hidden bg-neutral-900 flex-shrink-0">
                         {walletCard.avatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -1869,7 +1952,7 @@ export default function AppDashboard() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-muted-foreground bg-neutral-900">
+                          <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-muted-foreground bg-neutral-900">
                             IMG
                           </div>
                         )}
@@ -1877,20 +1960,24 @@ export default function AppDashboard() {
                     </div>
 
                     <div className="flex items-center justify-between z-10 pr-3">
-                      <span className="text-[9px] text-muted-foreground font-mono">
+                      <span className="text-xs text-muted-foreground font-mono">
                         {walletCard.phone}
                       </span>
 
                       <div className="flex gap-1">
                         <Link
                           href={`/share/?id=${walletCard.id}`}
+                          onClick={(e) => e.stopPropagation()}
                           className="p-1.5 rounded-lg bg-white/5 border border-card-border text-muted-foreground hover:text-foreground cursor-pointer transition"
                           title="명함 보기"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
                         <button
-                          onClick={() => handleDeleteFromWallet(walletCard.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFromWallet(walletCard.id);
+                          }}
                           className="p-1.5 rounded-lg bg-white/5 border border-card-border text-rose-quartz/60 hover:text-rose-quartz cursor-pointer transition"
                           title="지우기"
                         >

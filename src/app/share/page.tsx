@@ -16,7 +16,8 @@ import {
   ChevronDown, 
   ArrowLeft,
   Share2,
-  ExternalLink
+  ExternalLink,
+  User
 } from "lucide-react";
 import Link from "next/link";
 import { getGradientContrastColor, getContrastTextColor, copyToClipboard } from "@/lib/colorUtils";
@@ -367,9 +368,73 @@ function CardViewerContent() {
           <h2 className="text-xl font-semibold">신상 정보</h2>
         </div>
 
-        <div className="flex flex-col rounded-2xl bg-card-bg border border-card-border overflow-hidden backdrop-blur-md">
-          {card.phone && (
-            <div className="flex items-center justify-between p-4 border-b border-card-border group hover:bg-white/1 transition duration-300">
+        <div className="flex flex-col rounded-2xl bg-card-bg border border-card-border overflow-hidden backdrop-blur-md divide-y divide-card-border">
+          {/* 이름 */}
+          {card.name && card.showName !== false && (
+            <div className="flex items-center justify-between p-4 group hover:bg-white/1 transition duration-300">
+              <div className="flex items-center gap-3.5 flex-1 select-none">
+                <div className="p-2.5 rounded-xl bg-serenity/10 text-serenity border border-serenity/20 group-hover:scale-105 transition">
+                  <User className="w-4.5 h-4.5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">이름</span>
+                  <span className="text-sm font-medium tracking-wide">{card.name}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => handleCopy(card.name, "name")}
+                className="p-2 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg hover:bg-white/5 transition"
+              >
+                {copiedField === "name" ? <Check className="w-4 h-4 text-serenity" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+          )}
+
+          {/* 영문명 */}
+          {card.engName && card.showEngName !== false && (
+            <div className="flex items-center justify-between p-4 group hover:bg-white/1 transition duration-300">
+              <div className="flex items-center gap-3.5 flex-1 select-none">
+                <div className="p-2.5 rounded-xl bg-rose-quartz/10 text-rose-quartz border border-rose-quartz/20 group-hover:scale-105 transition">
+                  <User className="w-4.5 h-4.5 opacity-80" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">영문 이름</span>
+                  <span className="text-sm font-medium tracking-wide">{card.engName}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => handleCopy(card.engName!, "engName")}
+                className="p-2 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg hover:bg-white/5 transition"
+              >
+                {copiedField === "engName" ? <Check className="w-4 h-4 text-serenity" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+          )}
+
+          {/* 회사/직함 */}
+          {card.company && card.showCompany !== false && (
+            <div className="flex items-center justify-between p-4 group hover:bg-white/1 transition duration-300">
+              <div className="flex items-center gap-3.5 flex-1 select-none">
+                <div className="p-2.5 rounded-xl bg-serenity/10 text-serenity border border-serenity/20 group-hover:scale-105 transition">
+                  <Building className="w-4.5 h-4.5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">소속 및 직함</span>
+                  <span className="text-sm font-medium tracking-wide">{card.company}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => handleCopy(card.company!, "company")}
+                className="p-2 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg hover:bg-white/5 transition"
+              >
+                {copiedField === "company" ? <Check className="w-4 h-4 text-serenity" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+          )}
+
+          {/* 휴대전화 */}
+          {card.phone && card.showPhone !== false && (
+            <div className="flex items-center justify-between p-4 group hover:bg-white/1 transition duration-300">
               <a href={`tel:${card.phone}`} className="flex items-center gap-3.5 flex-1 select-none">
                 <div className="p-2.5 rounded-xl bg-serenity/10 text-serenity border border-serenity/20 group-hover:scale-105 transition">
                   <Phone className="w-4.5 h-4.5" />
@@ -388,8 +453,9 @@ function CardViewerContent() {
             </div>
           )}
 
-          {card.companyPhone && (
-            <div className="flex items-center justify-between p-4 border-b border-card-border group hover:bg-white/1 transition duration-300">
+          {/* 회사 번호 */}
+          {card.companyPhone && card.showCompanyPhone !== false && (
+            <div className="flex items-center justify-between p-4 group hover:bg-white/1 transition duration-300">
               <a href={`tel:${card.companyPhone}`} className="flex items-center gap-3.5 flex-1 select-none">
                 <div className="p-2.5 rounded-xl bg-rose-quartz/10 text-rose-quartz border border-rose-quartz/20 group-hover:scale-105 transition">
                   <Building className="w-4.5 h-4.5" />
@@ -408,7 +474,8 @@ function CardViewerContent() {
             </div>
           )}
 
-          {card.email && (
+          {/* 이메일 주소 */}
+          {card.email && card.showEmail !== false && (
             <div className="flex items-center justify-between p-4 group hover:bg-white/1 transition duration-300">
               <a href={`mailto:${card.email}`} className="flex items-center gap-3.5 flex-1 select-none">
                 <div className="p-2.5 rounded-xl bg-serenity/10 text-serenity border border-serenity/20 group-hover:scale-105 transition">
@@ -431,7 +498,7 @@ function CardViewerContent() {
       </section>
 
       {/* SECTION 3: Bio / Introduction */}
-      {card.bio && (
+      {card.bio && card.showBio !== false && (
         <section className="w-full max-w-[450px] px-6 py-12 flex flex-col gap-6 snap-start border-t border-card-border/50">
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-bold uppercase tracking-widest text-rose-quartz">INTRODUCTION</span>

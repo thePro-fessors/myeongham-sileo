@@ -69,6 +69,15 @@ export interface BusinessCard {
 
   links?: ProfileLink[]; // 추가 프로필 소셜/포트폴리오 링크 목록
 
+  // 공유 페이지(Share) 필드 노출 여부 설정
+  showName?: boolean;
+  showEngName?: boolean;
+  showCompany?: boolean;
+  showPhone?: boolean;
+  showCompanyPhone?: boolean;
+  showEmail?: boolean;
+  showBio?: boolean;
+
   createdAt: number;
 }
 
