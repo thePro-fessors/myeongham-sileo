@@ -11,8 +11,22 @@ const outfit = Outfit({
 import type { Viewport } from "next";
 
 export const metadata: Metadata = {
-  title: "Myeongham - Online Business Cards",
-  description: "Create and share your beautiful, custom-designed business cards. Support for QR codes, NFC, and HCE.",
+  metadataBase: new URL("https://no-paper.kro.kr"),
+  title: "no-paper - 스마트한 모바일 인맥 명함첩",
+  description: "나만의 고품격 모바일 명함을 3초 만에 만들고 NFC, QR코드 기술로 손쉽게 공유해보세요. 인맥을 똑똑하게 관리하는 나만의 명함첩 지갑.",
+  openGraph: {
+    title: "no-paper - 스마트한 모바일 인맥 명함첩",
+    description: "나만의 고품격 모바일 명함을 3초 만에 만들고 NFC, QR코드 기술로 손쉽게 공유해보세요. 인맥을 똑똑하게 관리하는 나만의 명함첩 지갑.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 1200,
+        alt: "no-paper 모바일 명함 미리보기",
+      },
+    ],
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {
