@@ -19,7 +19,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import Link from "next/link";
-import { getGradientContrastColor, getContrastTextColor } from "@/lib/colorUtils";
+import { getGradientContrastColor, getContrastTextColor, copyToClipboard } from "@/lib/colorUtils";
 
 function CardViewerContent() {
   const searchParams = useSearchParams();
@@ -65,7 +65,7 @@ function CardViewerContent() {
   }, [card]);
 
   const handleCopy = (text: string, fieldName: string) => {
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setCopiedField(fieldName);
     setTimeout(() => setCopiedField(null), 2000);
   };
@@ -78,7 +78,7 @@ function CardViewerContent() {
 
   const handleShareLink = () => {
     if (typeof window === "undefined") return;
-    navigator.clipboard.writeText(window.location.href);
+    copyToClipboard(window.location.href);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };

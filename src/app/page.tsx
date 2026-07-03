@@ -10,7 +10,7 @@ import {
   removeCardFromWallet,
   getCard
 } from "@/lib/db";
-import { getGradientContrastColor, getContrastTextColor, hashPassword } from "@/lib/colorUtils";
+import { getGradientContrastColor, getContrastTextColor, hashPassword, copyToClipboard } from "@/lib/colorUtils";
 import { QRCodeSVG } from "qrcode.react";
 import {
   Settings,
@@ -682,7 +682,7 @@ export default function AppDashboard() {
   const handleCopyLink = () => {
     if (typeof window === "undefined") return;
     const shareUrl = `${window.location.origin}/share/?id=${myCard.id}`;
-    navigator.clipboard.writeText(shareUrl);
+    copyToClipboard(shareUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
