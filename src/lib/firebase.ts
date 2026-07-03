@@ -3,8 +3,14 @@ import { BusinessCard } from "./db";
 // Dynamically resolve API URL based on frontend hostname (useful for native devices or local Docker setups)
 export const getApiUrl = () => {
   if (typeof window === "undefined") return "http://localhost:5001";
-  const host = window.location.hostname;
-  return `http://${host}:5001`;
+  
+  // Local development fallback to port 5001
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    return "http://localhost:5001";
+  }
+  
+  // In production, we route through the same origin using reverse proxy
+  return window.location.origin;
 };
 
 // Check if Remote server is reachable/enabled
