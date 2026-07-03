@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     description: "나만의 고품격 모바일 명함을 3초 만에 만들고 NFC, QR코드 기술로 손쉽게 공유해보세요. 인맥을 똑똑하게 관리하는 나만의 명함첩 지갑.",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image-v2.png",
         width: 1200,
         height: 1200,
         alt: "no-paper 모바일 명함 미리보기",
