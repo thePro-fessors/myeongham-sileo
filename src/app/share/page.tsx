@@ -155,7 +155,7 @@ function CardViewerContent() {
 
         {/* Outer Premium Frame */}
         <div 
-          className="relative w-full max-w-[340px] sm:max-w-[380px] aspect-[1.586/1] rounded-2xl p-[1.5px] shadow-2xl transition duration-500 hover:scale-[1.02]"
+          className="relative w-full max-w-[340px] sm:max-w-[380px] aspect-[1.586/1] rounded-2xl p-[1.5px] shadow-2xl transition duration-500 hover:scale-[1.02] z-10"
           style={{
             background: card.bgType === "solid" ? card.bgColor : getGradientString(card)
           }}
@@ -188,8 +188,7 @@ function CardViewerContent() {
             {/* 기본 테두리 및 프로필 레이아웃 템플릿 적용 여부 */}
             {card.useDefaultTemplate && (
               <div 
-                className="absolute inset-0 w-full h-full z-0 p-5 flex flex-col justify-between pointer-events-none border rounded-[15px]"
-                style={{ borderColor: card.textColor ? `${card.textColor}26` : "rgba(255, 255, 255, 0.1)" }}
+                className="absolute inset-0 w-full h-full z-0 p-5 flex flex-col justify-between pointer-events-none"
               >
                 
                 {/* Top Row: Info badge & Avatar */}
@@ -353,6 +352,11 @@ function CardViewerContent() {
             )}
           </div>
         </div>
+
+        {/* Premium Floor Shadow Effect */}
+        <div 
+          className="w-[80%] max-w-[300px] h-6 mt-6 bg-black/60 blur-xl rounded-full pointer-events-none z-0" 
+        />
 
         {/* Scroll Indicator Micro-animation */}
         <div className="absolute bottom-8 flex flex-col items-center gap-1.5 animate-bounce text-muted-foreground text-[10px] tracking-widest uppercase">
@@ -532,26 +536,12 @@ function CardViewerContent() {
                 className="flex items-center justify-between p-4 rounded-2xl bg-card-bg border border-card-border backdrop-blur-md group hover:bg-white/5 transition duration-300 cursor-pointer"
               >
                 <div className="flex items-center flex-1">
-                  {/* 왼쪽 사진/아이콘 */}
-                  {link.iconUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={link.iconUrl}
-                      alt={link.title}
-                      className="w-11 h-11 rounded-xl object-cover border border-card-border bg-neutral-900 mr-3.5 group-hover:scale-105 transition duration-300"
-                    />
-                  ) : (
-                    <div className="w-11 h-11 rounded-xl border border-card-border bg-neutral-900/60 flex items-center justify-center mr-3.5 text-muted-foreground text-xs font-bold uppercase">
-                      LINK
-                    </div>
-                  )}
-
                   {/* 가운데 글 */}
                   <div className="flex flex-col gap-0.5">
                     <span className="text-xs font-bold text-white group-hover:text-serenity transition">
                       {link.title || "링크 바로가기"}
                     </span>
-                    <span className="text-[9px] text-muted-foreground font-mono truncate max-w-[200px]">
+                    <span className="text-[9px] text-muted-foreground font-mono truncate max-w-[260px] sm:max-w-[300px]">
                       {link.url}
                     </span>
                   </div>

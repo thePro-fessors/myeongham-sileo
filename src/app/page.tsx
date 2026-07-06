@@ -699,7 +699,6 @@ export default function AppDashboard() {
       id: `link-${Date.now()}`,
       title: "",
       url: "",
-      iconUrl: "",
       borderColor: "#92a8d1"
     };
     setMyCard((prev) => {
@@ -862,8 +861,7 @@ export default function AppDashboard() {
                   {/* 1. 원래 스크린샷 템플릿 디자인 오버레이 (useDefaultTemplate이 true일 때만) */}
                   {myCard.useDefaultTemplate && (
                     <div 
-                      className="absolute inset-0 w-full h-full z-0 p-5 flex flex-col justify-between pointer-events-none border rounded-[15px]"
-                      style={{ borderColor: myCard.textColor ? `${myCard.textColor}26` : "rgba(255, 255, 255, 0.1)" }}
+                      className="absolute inset-0 w-full h-full z-0 p-5 flex flex-col justify-between pointer-events-none"
                     >
 
                       {/* Top Row: Info badge & Avatar */}
@@ -1859,17 +1857,6 @@ export default function AppDashboard() {
                               onChange={(e) => updateProfileLink(link.id, "url", e.target.value)}
                               className="px-2.5 py-1.5 rounded-lg bg-[#0d0f12] border border-card-border text-xs text-white focus:border-serenity focus:outline-none"
                               placeholder="https://example.com"
-                            />
-                          </div>
-
-                          <div className="flex flex-col gap-1">
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase">아이콘 이미지 주소 (URL)</span>
-                            <input
-                              type="text"
-                              value={link.iconUrl || ""}
-                              onChange={(e) => updateProfileLink(link.id, "iconUrl", e.target.value)}
-                              className="px-2.5 py-1.5 rounded-lg bg-[#0d0f12] border border-card-border text-xs text-white focus:border-serenity focus:outline-none"
-                              placeholder="https://example.com/icon.png"
                             />
                           </div>
 
