@@ -159,12 +159,14 @@ export const DEFAULT_CARD: BusinessCard = {
       id: "link-1",
       title: "공식 포트폴리오 웹사이트",
       url: "https://gildong.io",
+      iconUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=150&auto=format&fit=crop&q=60",
       borderColor: "#92a8d1"
     },
     {
       id: "link-2",
       title: "인스타그램 SNS",
       url: "https://instagram.com",
+      iconUrl: "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=150&auto=format&fit=crop&q=60",
       borderColor: "#f7caca"
     }
   ],

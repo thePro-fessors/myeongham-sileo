@@ -536,12 +536,26 @@ function CardViewerContent() {
                 className="flex items-center justify-between p-4 rounded-2xl bg-card-bg border border-card-border backdrop-blur-md group hover:bg-white/5 transition duration-300 cursor-pointer"
               >
                 <div className="flex items-center flex-1">
+                  {/* 왼쪽 사진/아이콘 */}
+                  {link.iconUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={link.iconUrl}
+                      alt={link.title}
+                      className="w-11 h-11 rounded-xl object-cover border border-card-border bg-neutral-900 mr-3.5 group-hover:scale-105 transition duration-300"
+                    />
+                  ) : (
+                    <div className="w-11 h-11 rounded-xl border border-card-border bg-neutral-900/60 flex items-center justify-center mr-3.5 text-muted-foreground text-xs font-bold uppercase">
+                      LINK
+                    </div>
+                  )}
+
                   {/* 가운데 글 */}
                   <div className="flex flex-col gap-0.5">
                     <span className="text-xs font-bold text-white group-hover:text-serenity transition">
                       {link.title || "링크 바로가기"}
                     </span>
-                    <span className="text-[9px] text-muted-foreground font-mono truncate max-w-[260px] sm:max-w-[300px]">
+                    <span className="text-[9px] text-muted-foreground font-mono truncate max-w-[200px]">
                       {link.url}
                     </span>
                   </div>
